@@ -1,0 +1,256 @@
+.terminalContainer {
+  max-width: 1200px;
+  margin: 2rem auto;
+  background: #2d2b30;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(157, 78, 221, 0.3);
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  cursor: text;
+  border: 1px solid #444050;
+}
+
+.terminalHeader {
+  background: #1e1b20;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #3a3640;
+}
+
+.terminalButtons {
+  display: flex;
+  gap: 8px;
+  margin-right: 1rem;
+}
+
+.terminalButtons span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: block;
+}
+
+.btnClose {
+  background: #ff5f56;
+}
+
+.btnMinimize {
+  background: #ffbd2e;
+}
+
+.btnMaximize {
+  background: #27c93f;
+}
+
+.terminalTitle {
+  color: #bd93f9;
+  font-size: 0.85rem;
+  flex: 1;
+  text-align: center;
+  font-family: monospace;
+}
+
+.terminalBody {
+  padding: 1.5rem;
+  height: 500px;
+  overflow-y: auto;
+  background: #2d2b30;
+  color: #f8f8f2;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.line {
+  margin-bottom: 0.5rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.system {
+  color: #bd93f9;
+  font-style: italic;
+}
+
+.command {
+  color: #ff79c6;
+  font-weight: bold;
+}
+
+.output {
+  color: #f8f8f2;
+  margin-left: 0;
+}
+
+.error {
+  color: #ff5555;
+}
+
+.inputLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  position: relative;
+}
+
+.prompt {
+  color: #bd93f9;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ff79c6;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  caret-color: #bd93f9;
+}
+
+.cursor {
+  display: none;
+}
+
+/* Menu styles */
+.menu {
+  color: #bd93f9;
+}
+
+.menuHeader {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #ff79c6;
+}
+
+.menuItem {
+  display: flex;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.commandName {
+  color: #ff79c6;
+  font-weight: bold;
+  min-width: 120px;
+}
+
+.commandDesc {
+  color: #bd93f9;
+}
+
+/* Category styles */
+.categoryHeader {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #ff79c6;
+}
+
+.category {
+  margin-left: 1rem;
+}
+
+.categoryTitle {
+  color: #bd93f9;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.output a {
+  color: #ff79c6;
+  text-decoration: none;
+  transition: color 0.2s;
+  border-bottom: 1px dotted #bd93f9;
+}
+
+.output a:hover {
+  color: #ffb86c;
+  text-decoration: none;
+  border-bottom: 1px solid #ffb86c;
+}
+
+/* Project styles */
+.projectItem {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.projectStatus {
+  font-size: 1rem;
+}
+
+.projectName {
+  color: #bd93f9;
+  font-weight: bold;
+  min-width: 150px;
+}
+
+.projectDesc {
+  color: #f8f8f2;
+}
+
+.legend {
+  color: #6272a4;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ASCII art */
+.ascii {
+  color: #bd93f9;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: 0 0 5px rgba(189, 147, 249, 0.5);
+}
+
+/* Scrollbar styling */
+.terminalBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminalBody::-webkit-scrollbar-track {
+  background: #2d2b30;
+}
+
+.terminalBody::-webkit-scrollbar-thumb {
+  background: #44475a;
+  border-radius: 4px;
+}
+
+.terminalBody::-webkit-scrollbar-thumb:hover {
+  background: #6272a4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .terminalContainer {
+    margin: 1rem;
+    border-radius: 8px;
+  }
+
+  .terminalBody {
+    padding: 1rem;
+    font-size: 0.85rem;
+    height: 400px;
+  }
+
+  .menuItem {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .commandName {
+    min-width: auto;
+  }
+
+  .projectItem {
+    flex-wrap: wrap;
+  }
+}
