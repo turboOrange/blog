@@ -23,7 +23,7 @@ export default function Terminal() {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load markdown content
@@ -218,7 +218,12 @@ In whatever I do you might find ints of my love for horror and retro computing.
 
   // Auto-scroll to bottom
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTo({
+        top: terminalBodyRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [lines]);
 
   const handleCommand = (cmd: string) => {
@@ -307,7 +312,7 @@ In whatever I do you might find ints of my love for horror and retro computing.
         </div>
         <div className={styles.terminalTitle}>terminal@homepage ~ zsh</div>
       </div>
-      <div className={styles.terminalBody}>
+      <div className={styles.terminalBody} ref={terminalBodyRef}>
         {lines.map((line, idx) => (
           <div
             key={idx}
@@ -331,7 +336,6 @@ In whatever I do you might find ints of my love for horror and retro computing.
             />
           </div>
         )}
-        <div ref={terminalEndRef} />
       </div>
     </div>
   );

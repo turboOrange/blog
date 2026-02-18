@@ -1,6 +1,7 @@
 .terminalContainer {
-  max-width: 1200px;
-  margin: 2rem auto;
+  width: 90vw;
+  max-width: 1600px;
+  margin: 0 auto;
   background: #2d2b30;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(157, 78, 221, 0.3);
@@ -53,11 +54,12 @@
 
 .terminalBody {
   padding: 1.5rem;
-  height: 500px;
+  height: 60vh;
+  min-height: 400px;
   overflow-y: auto;
   background: #2d2b30;
-  color: #f8f8f2;
-  font-size: 0.95rem;
+  color: #bd93f9;
+  font-size: 1rem;
   line-height: 1.6;
 }
 
@@ -78,7 +80,7 @@
 }
 
 .output {
-  color: #f8f8f2;
+  color: #bd93f9;
   margin-left: 0;
 }
 
@@ -192,13 +194,14 @@
 }
 
 .projectDesc {
-  color: #f8f8f2;
+  color: #bd93f9;
 }
 
 .legend {
-  color: #6272a4;
+  color: #bd93f9;
   font-size: 0.85rem;
   font-style: italic;
+  opacity: 0.8;
 }
 
 /* ASCII art */
@@ -231,14 +234,16 @@
 /* Responsive */
 @media (max-width: 768px) {
   .terminalContainer {
-    margin: 1rem;
+    width: 90vw;
+    margin: 1rem auto;
     border-radius: 8px;
   }
 
   .terminalBody {
     padding: 1rem;
     font-size: 0.85rem;
-    height: 400px;
+    height: 55vh;
+    min-height: 350px;
   }
 
   .menuItem {
