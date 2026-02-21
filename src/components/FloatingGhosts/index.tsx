@@ -272,7 +272,7 @@ export default function FloatingGhosts(): React.ReactNode {
       {ghosts.map((ghost, idx) => (
         <pre
           key={idx}
-          className={`${styles.ghost} ${ghost.isDragging ? styles.dragging : ''}`}
+          className={`${styles.ghost} ${ghost.isDragging ? styles.dragging : ''} ${ghost.teleportPhase === 'fading-out' || ghost.teleportPhase === 'teleporting' ? styles.fadingOut : ''} ${ghost.teleportPhase === 'fading-in' ? styles.fadingIn : ''}`}
           style={{
             left: `${ghost.x}%`,
             top: `${ghost.y}%`,

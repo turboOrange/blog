@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import styles from './Terminal.module.css';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -25,6 +25,49 @@ export default function Terminal() {
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
   const terminalBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const resetTilt = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.transition = 'transform 0.5s ease';
+    el.style.transform = 'perspective(1200px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+    setTimeout(() => {
+      if (el) el.style.transition = '';
+    }, 500);
+  }, []);
+
+  // Global mouse tracking so tilt works even outside the terminal rect
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      const el = containerRef.current;
+      if (!el) return;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        // Clamp influence: full tilt at ±half-terminal-width distance
+        const maxDist = Math.max(rect.width, rect.height);
+        const dx = (e.clientX - cx) / (maxDist / 2);
+        const dy = (e.clientY - cy) / (maxDist / 2);
+        const rotateX = -Math.max(-1, Math.min(1, dy)) * 8;
+        const rotateY = Math.max(-1, Math.min(1, dx)) * 8;
+        el.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01,1.01,1.01)`;
+      });
+    };
+
+    const onMouseLeave = () => resetTilt();
+
+    window.addEventListener('mousemove', onMouseMove);
+    document.documentElement.addEventListener('mouseleave', onMouseLeave);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      document.documentElement.removeEventListener('mouseleave', onMouseLeave);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [resetTilt]);
 
   // Load markdown content
   useEffect(() => {
@@ -303,7 +346,11 @@ In whatever I do you might find ints of my love for horror and retro computing.
   };
 
   return (
-    <div className={styles.terminalContainer} onClick={() => inputRef.current?.focus()}>
+    <div
+      ref={containerRef}
+      className={styles.terminalContainer}
+      onClick={() => inputRef.current?.focus()}
+    >
       <div className={styles.terminalHeader}>
         <div className={styles.terminalButtons}>
           <span className={styles.btnClose}></span>

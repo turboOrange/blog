@@ -55,6 +55,36 @@
   }
 }
 
+@keyframes wavy-dissolve {
+  0%   { filter: blur(0px)   skewX(0deg)  skewY(0deg);  letter-spacing: normal; }
+  15%  { filter: blur(1px)   skewX(8deg)  skewY(-4deg); letter-spacing: 0.08em; }
+  30%  { filter: blur(2px)   skewX(-10deg) skewY(6deg); letter-spacing: 0.15em; }
+  45%  { filter: blur(4px)   skewX(12deg) skewY(-8deg); letter-spacing: 0.25em; }
+  60%  { filter: blur(6px)   skewX(-8deg) skewY(4deg);  letter-spacing: 0.35em; }
+  75%  { filter: blur(8px)   skewX(6deg)  skewY(-2deg); letter-spacing: 0.5em;  }
+  90%  { filter: blur(10px)  skewX(-4deg) skewY(2deg);  letter-spacing: 0.6em;  }
+  100% { filter: blur(12px)  skewX(0deg)  skewY(0deg);  letter-spacing: 0.7em;  }
+}
+
+@keyframes wavy-materialize {
+  0%   { filter: blur(12px)  skewX(0deg)  skewY(0deg);  letter-spacing: 0.7em;  }
+  15%  { filter: blur(10px)  skewX(-4deg) skewY(2deg);  letter-spacing: 0.6em;  }
+  30%  { filter: blur(8px)   skewX(6deg)  skewY(-2deg); letter-spacing: 0.5em;  }
+  45%  { filter: blur(6px)   skewX(-8deg) skewY(4deg);  letter-spacing: 0.35em; }
+  60%  { filter: blur(4px)   skewX(12deg) skewY(-8deg); letter-spacing: 0.25em; }
+  75%  { filter: blur(2px)   skewX(-10deg) skewY(6deg); letter-spacing: 0.15em; }
+  90%  { filter: blur(1px)   skewX(8deg)  skewY(-4deg); letter-spacing: 0.08em; }
+  100% { filter: blur(0px)   skewX(0deg)  skewY(0deg);  letter-spacing: normal; }
+}
+
+.ghost.fadingOut {
+  animation: wavy-dissolve 1s ease-in forwards;
+}
+
+.ghost.fadingIn {
+  animation: wavy-materialize 1s ease-out forwards;
+}
+
 [data-theme='dark'] .ghost {
   color: rgba(167, 139, 250, 0.8);
   text-shadow: 0 0 15px rgba(167, 139, 250, 1);

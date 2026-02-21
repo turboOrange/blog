@@ -9,6 +9,8 @@
   font-family: 'Courier New', monospace;
   cursor: text;
   border: 1px solid #444050;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .terminalHeader {
