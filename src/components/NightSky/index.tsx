@@ -25,7 +25,7 @@ function generateStars(count: number): Star[] {
   }));
 }
 
-const STARS = generateStars(60);
+const STARS = generateStars(42);
 
 export default function NightSky(): React.ReactNode {
   // Stars are static — generated once at module load, rendered via pure CSS.
