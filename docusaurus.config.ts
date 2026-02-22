@@ -35,6 +35,11 @@ const config: Config = {
     locales: ['en'],
   },
 
+
+  plugins: [
+    './src/plugins/blog-global-data',
+  ],
+
   presets: [
     [
       'classic',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import { usePluginData } from '@docusaurus/useGlobalData';
 import styles from './Terminal.module.css';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -77,6 +78,9 @@ export default function Terminal() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
   const [isFlipped, setIsFlipped] = useState(false);
+
+  type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
+  const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
 
   const terminalBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -282,6 +286,21 @@ export default function Terminal() {
       description: 'Show help information',
       execute: () => <MarkdownRenderer content={`# 🤖 Terminal Help\n\n- Type a command and press Enter\n- Use ↑/↓ arrow keys to navigate history\n- Type 'menu' to see all commands\n- Type 'clear' to clear the screen`} />,
     },
+    blog: {
+      name: 'blog',
+      description: 'List all blog posts  (also: ls blog)',
+      execute: () => {
+        if (blogPosts.length === 0) {
+          return <MarkdownRenderer content={`# 📰 Blog\n\nNo posts loaded yet — try again in a moment!`} />;
+        }
+        const list = blogPosts.map(p => {
+          const dateStr = p.date ? new Date(p.date).toLocaleDateString('en-CA') : '??-??-??';
+          const tagsStr = p.tags.length ? ` *(${p.tags.join(', ')})*` : '';
+          return `- **[${dateStr}]** \`${p.slug}\` — ${p.title}${tagsStr}`;
+        }).join('\n');
+        return <MarkdownRenderer content={`# 📰 Blog Posts\n\n${list}\n\n---\nType \`cat blog/<slug>\` to read a post.`} />;
+      },
+    },
   };
 
   useEffect(() => {
@@ -316,6 +335,43 @@ export default function Terminal() {
     setLines((prev) => [...prev, { type: 'command', content: `$ ${cmd}` }]);
     if (!trimmedCmd) return;
     if (trimmedCmd === 'clear') { setLines([]); return; }
+    // cat is ONLY allowed as `cat blog/<slug>` — block everything else
+    if (trimmedCmd.startsWith('cat ') && !trimmedCmd.match(/^cat\s+blog\/[^\s/]+$/)) {
+      setLines((prev) => [...prev, {
+        type: 'output',
+        content: <div className={styles.error}>Permission denied. Only `cat blog/&lt;slug&gt;` is allowed.</div>,
+      }]);
+      return;
+    }
+    // Handle `cat blog/<slug>` — read a specific blog post
+    const catBlogMatch = trimmedCmd.match(/^cat\s+blog\/(.+)$/);
+    if (catBlogMatch) {
+      const slug = catBlogMatch[1].trim();
+      const post = blogPosts.find(p => p.slug === slug);
+      if (!post) {
+        setLines((prev) => [...prev, {
+          type: 'output',
+          content: (
+            <div className={styles.error}>
+              cat: blog/{slug}: No such post.<br />
+              Type 'blog' to list available posts.
+            </div>
+          ),
+        }]);
+      } else {
+        const dateStr = post.date ? new Date(post.date).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+        const tagsStr = post.tags.length ? `\n**Tags:** ${post.tags.map(t => `\`${t}\``).join(' · ')}` : '';
+        const md = `# ${post.title}\n\n*${dateStr}*${tagsStr}\n\n---\n\n${post.content}`;
+        setLines((prev) => [...prev, { type: 'output', content: <MarkdownRenderer content={md} /> }]);
+      }
+      return;
+    }
+    // Handle `ls blog` — alias for blog command
+    if (trimmedCmd === 'ls blog' || trimmedCmd === 'ls /blog') {
+      const output = commands['blog'].execute();
+      if (output) setLines((prev) => [...prev, { type: 'output', content: output }]);
+      return;
+    }
     if (commands[trimmedCmd]) {
       const output = commands[trimmedCmd].execute();
       if (output) setLines((prev) => [...prev, { type: 'output', content: output }]);
