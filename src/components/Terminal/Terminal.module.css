@@ -1,7 +1,5 @@
 .terminalContainer {
-  width: 90vw;
-  max-width: 1600px;
-  margin: 0 auto;
+  width: 100%;
   background: #2d2b30;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(157, 78, 221, 0.3);
@@ -9,9 +7,71 @@
   font-family: 'Courier New', monospace;
   cursor: text;
   border: 1px solid #444050;
+}
+
+/* ── Flip card wrapper ──────────────────────────────────────────────────────── */
+.flipWrapper {
+  width: 90vw;
+  max-width: 1600px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* The element that receives both tilt and flip transforms */
+.flipInner {
+  position: relative;
+  width: 100%;
   transform-style: preserve-3d;
   will-change: transform;
 }
+
+/* ── Back overlay — lives on the back face in 3-D space ─────────────────────
+   rotateY(180deg)        → places it on the back face
+   scaleX(-1)             → mirrors the content it reveals underneath
+   backface-visibility    → hidden when front is showing, visible when back is
+   pointer-events: none   → the real terminal beneath handles interaction
+   The frost uses backdrop-filter so it actually blurs whatever is rendered
+   behind it in the normal stacking order (the live terminal).             */
+.backOverlay {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg) scaleX(-1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Frosted glass layer */
+.frostOverlay {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(14px) saturate(0.5) brightness(0.65);
+  -webkit-backdrop-filter: blur(14px) saturate(0.5) brightness(0.65);
+  background: rgba(45, 43, 48, 0.5);
+  border-radius: 12px;
+}
+
+/* ASCII art on top of the frost */
+.backAsciiOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backAsciiOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+
 
 .terminalHeader {
   background: #1e1b20;
@@ -213,6 +273,17 @@
   line-height: 1.2;
   margin: 0;
   text-shadow: 0 0 5px rgba(189, 147, 249, 0.5);
+}
+
+.asciiBack {
+  color: rgba(189, 147, 249, 0.9);
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.3rem, 0.75vw, 0.7rem);
+  line-height: 1.2;
+  text-align: center;
+  white-space: pre;
+  margin: 0;
+  text-shadow: 0 0 12px rgba(189, 147, 249, 0.8), 0 0 30px rgba(189, 147, 249, 0.4);
 }
 
 /* Scrollbar styling */
