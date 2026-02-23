@@ -257,7 +257,7 @@ export default function Terminal() {
       description: 'Show information about me',
       execute: () => {
         if (markdownContent.about) return <MarkdownRenderer content={markdownContent.about} />;
-        return <MarkdownRenderer content={`# 👋 About Me\n\nHi! Welcome to my space!\n\n## Background\n\nI'm just a curious person that likes building things. I'm particularly interested in electronics and computing.\n\nFollowing those interests I now have:\n- An electronic repair DEP\n- An electronics computers and networks DEC\n- A computer science BAC\n\nAnd I've been working as a software developer in test and QA for a while.\nI just love building stuff.\nIn whatever I do you might find ints of my love for horror and retro computing.\n`} />;
+        return <MarkdownRenderer content={`# About Me\n\nHi! Welcome to my space!\n\n## Background\n\nI'm just a curious person that likes building things. I'm particularly interested in electronics and computing.\n\nFollowing those interests I now have:\n- An electronic repair DEP\n- An electronics computers and networks DEC\n- A computer science BAC\n\nAnd I've been working as a software developer in test and QA for a while.\nI just love building stuff.\nIn whatever I do you might find ints of my love for horror and retro computing.\n`} />;
       },
     },
     links: {
@@ -273,7 +273,7 @@ export default function Terminal() {
       description: 'List my projects and their status',
       execute: () => {
         if (markdownContent.projects) return <MarkdownRenderer content={markdownContent.projects} />;
-        return <MarkdownRenderer content={`# 💼 My Projects\n\n## Active Projects\n\n- [Personal Blog](https://github.com/turboOrange/blog) I use docusaurus (react based generator). My goal is to personalise it to the maximum. Making it feel good and real.\n- [spinashlang](https://github.com/spinachlang/spinachlang) A quantum language I made to simplify writing quantum code. Advanced but not finished.\n\n## Inactive Projects\n- [readcode](https://github.com/turboOrange/readcode) A university group project to explore using AI to help learning how to read code.\n- [pride ocarina](https://github.com/turboOrange/pride-ocarina) A project to make people learn to solder during pride month.\n`} />;
+        return <MarkdownRenderer content={`# My Projects\n\n## Active Projects\n\n- [Personal Blog](https://github.com/turboOrange/blog) I use docusaurus (react based generator). My goal is to personalise it to the maximum. Making it feel good and real.\n- [spinashlang](https://github.com/spinachlang/spinachlang) A quantum language I made to simplify writing quantum code. Advanced but not finished.\n\n## Inactive Projects\n- [readcode](https://github.com/turboOrange/readcode) A university group project to explore using AI to help learning how to read code.\n- [pride ocarina](https://github.com/turboOrange/pride-ocarina) A project to make people learn to solder during pride month.\n`} />;
       },
     },
     clear: {
@@ -284,21 +284,21 @@ export default function Terminal() {
     help: {
       name: 'help',
       description: 'Show help information',
-      execute: () => <MarkdownRenderer content={`# 🤖 Terminal Help\n\n- Type a command and press Enter\n- Use ↑/↓ arrow keys to navigate history\n- Type 'menu' to see all commands\n- Type 'clear' to clear the screen`} />,
+      execute: () => <MarkdownRenderer content={`# Terminal Help\n\n- Type a command and press Enter\n- Use ↑/↓ arrow keys to navigate history\n- Type 'menu' to see all commands\n- Type 'clear' to clear the screen`} />,
     },
     blog: {
       name: 'blog',
       description: 'List all blog posts  (also: ls blog)',
       execute: () => {
         if (blogPosts.length === 0) {
-          return <MarkdownRenderer content={`# 📰 Blog\n\nNo posts loaded yet — try again in a moment!`} />;
+          return <MarkdownRenderer content={`# Blog\n\nNo posts loaded yet — try again in a moment!`} />;
         }
         const list = blogPosts.map(p => {
           const dateStr = p.date ? new Date(p.date).toLocaleDateString('en-CA') : '??-??-??';
           const tagsStr = p.tags.length ? ` *(${p.tags.join(', ')})*` : '';
           return `- **[${dateStr}]** \`${p.slug}\` — ${p.title}${tagsStr}`;
         }).join('\n');
-        return <MarkdownRenderer content={`# 📰 Blog Posts\n\n${list}\n\n---\nType \`cat blog/<slug>\` to read a post.`} />;
+        return <MarkdownRenderer content={`# Blog Posts\n\n${list}\n\n---\nType \`cat blog/<slug>\` to read a post.`} />;
       },
     },
   };
@@ -417,8 +417,18 @@ export default function Terminal() {
     <div ref={wrapperRef} className={styles.flipWrapper}>
       <div ref={innerRef} className={styles.flipInner}>
 
+        {/* ── Real 3-D edge faces — siblings in the same preserve-3d context ── */}
+        {/* Each face is positioned via CSS translate3d so it lives at the actual
+            edge of the slab and rotates with it naturally in 3-D space.        */}
+        <div className={`${styles.glassFace} ${styles.faceTop}`}    aria-hidden="true" />
+        <div className={`${styles.glassFace} ${styles.faceBottom}`} aria-hidden="true" />
+        <div className={`${styles.glassFace} ${styles.faceLeft}`}   aria-hidden="true" />
+        <div className={`${styles.glassFace} ${styles.faceRight}`}  aria-hidden="true" />
+
         {/* Single terminal — always rendered, drives the height */}
         <div className={styles.terminalContainer} onClick={() => !isFlipped && inputRef.current?.focus()}>
+          {/* Specular glare streak — sits above everything, pointer-events: none */}
+          <div className={styles.glassGlare} aria-hidden="true" />
           <div className={styles.terminalHeader}>
             <div className={styles.terminalButtons}>
               <span className={styles.btnClose}></span>
