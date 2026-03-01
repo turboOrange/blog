@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Cozy Terminator Coffee Shop',
-  tagline: 'Terminator is a barista now',
+  title: 'Spooky terminal',
+  tagline: 'Don\'t be afraid of the terminal',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
