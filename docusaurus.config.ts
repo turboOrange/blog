@@ -72,10 +72,10 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'My Site',
+      title: 'Spooky Terminal',
       logo: {
-        alt: 'My Site Logo',
-        src: 'img/logo.svg',
+        alt: 'spooky terminal logo',
+        src: 'img/logo.png',
       },
       items: [
         {
@@ -86,7 +86,7 @@ const config: Config = {
         },
         {to: '/blog/blog/', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/facebook/docusaurus',
+          href: 'https://github.com/turboOrange',
           label: 'GitHub',
           position: 'right',
         },
