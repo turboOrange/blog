@@ -305,7 +305,7 @@ export default function Terminal() {
 
   useEffect(() => {
     const initialMessages = [
-      { type: 'system' as const, content: welcomeBanner, delay: 0 },
+      { type: 'system' as const, content: <pre className={styles.welcomeBanner}>{welcomeBanner}</pre>, delay: 0 },
       { type: 'system' as const, content: '> Loading awesome content...', delay: 1000 },
       { type: 'system' as const, content: '> Ready! Type "menu" to see available commands.', delay: 1500 },
     ];
