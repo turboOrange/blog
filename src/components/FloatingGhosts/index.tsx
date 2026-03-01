@@ -9,10 +9,25 @@ interface GhostPosition {
   angle: number;
   opacity: number;
   teleportTimer: number;
-  teleportPhase: 'moving' | 'stopping' | 'fading-out' | 'teleporting' | 'fading-in';
+  teleportPhase: 'moving' | 'stopping' | 'fading-out' | 'teleporting' | 'fading-in' | 'dying';
   isDragging?: boolean;
   spinX: number;
   spinY: number;
+  // elimination animation
+  dyingProgress?: number; // 0→1
+  dyingTargetX?: number;
+  dyingTargetY?: number;
+}
+
+interface Particle {
+  id: number;
+  x: number; // vw %
+  y: number; // vh %
+  vx: number;
+  vy: number;
+  char: string;
+  opacity: number;
+  color: string;
 }
 
 const GHOST_ART = `▓▓▓▓▓▓▓
@@ -22,7 +37,24 @@ const GHOST_ART = `▓▓▓▓▓▓▓
 ▓▓▓▓▓▓▓▓▓
 ▓ ▓ ▓ ▓ ▓`;
 
-const TICK_MS = 50; // ~20fps physics; rendering is CSS-driven
+const TRASH_ART_CLOSED = ` _███████_
+ █████████
+  ▓█▓█▓█▓
+  ▓█▓█▓█▓
+  ▓█▓█▓█▓`;
+
+const TRASH_ART_OPEN = `
+███████
+    ▀▀▀▀▀
+ ▓█▓█▓█▓
+ ▓█▓█▓█▓
+ ▓█▓█▓█▓ ▓`;
+
+const PARTICLE_CHARS = ['👻', '💀', '✨', '*', '·', '°', '~', '¬', '░', '▒'];
+const PARTICLE_COLORS = ['#a78bfa', '#f472b6', '#67e8f9', '#fde68a', '#86efac'];
+
+const TICK_MS = 50;
+let particleIdCounter = 0;
 
 export default function FloatingGhosts(): React.ReactNode {
   const [ghosts, setGhosts] = useState<GhostPosition[]>([
@@ -31,72 +63,132 @@ export default function FloatingGhosts(): React.ReactNode {
     { x: 30, y: 80, speedX: 0.05, speedY: -0.08, angle: Math.PI / 2, opacity: 1, teleportTimer: Math.random() * 200 + 200, teleportPhase: 'moving', spinX: 0, spinY: 0 },
   ]);
 
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [trashHover, setTrashHover] = useState(false);
+  const [trashShake, setTrashShake] = useState(false);
+  const [anyDragging, setAnyDragging] = useState(false);
+
   const draggedGhostRef = useRef<number | null>(null);
   const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastMousePosRef = useRef<{ x: number; y: number; time: number }>({ x: 0, y: 0, time: Date.now() });
   const rafRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(Date.now());
+  const trashRef = useRef<HTMLPreElement | null>(null);
+
+  // Check if current drag position is over the trash can
+  const isOverTrash = useCallback((clientX: number, clientY: number) => {
+    if (!trashRef.current) return false;
+    const rect = trashRef.current.getBoundingClientRect();
+    const pad = 30;
+    return (
+      clientX >= rect.left - pad &&
+      clientX <= rect.right + pad &&
+      clientY >= rect.top - pad &&
+      clientY <= rect.bottom + pad
+    );
+  }, []);
+
+  const spawnParticles = useCallback((trashX: number, trashY: number) => {
+    const burst: Particle[] = Array.from({ length: 22 }, () => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.4 + Math.random() * 1.2;
+      return {
+        id: particleIdCounter++,
+        x: trashX,
+        y: trashY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.5, // slight upward bias
+        char: PARTICLE_CHARS[Math.floor(Math.random() * PARTICLE_CHARS.length)],
+        opacity: 1,
+        color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
+      };
+    });
+    setParticles((prev) => [...prev, ...burst]);
+  }, []);
 
   const tick = useCallback(() => {
     const now = Date.now();
     if (now - lastTickRef.current >= TICK_MS) {
       lastTickRef.current = now;
 
+      // Tick particles
+      setParticles((prev) =>
+        prev
+          .map((p) => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.06, opacity: p.opacity - 0.035 }))
+          .filter((p) => p.opacity > 0)
+      );
+
       setGhosts((prevGhosts) =>
-        prevGhosts.map((ghost) => {
-          if (ghost.isDragging) return ghost;
+        prevGhosts
+          .filter((g) => !(g.teleportPhase === 'dying' && (g.dyingProgress ?? 0) >= 1))
+          .map((ghost) => {
+            if (ghost.isDragging) return ghost;
 
-          let { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY } = ghost;
+            let { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY } = ghost;
 
-          angle += 0.015;
-          teleportTimer -= 1;
-          spinX *= 0.92;
-          spinY *= 0.92;
-
-          if (teleportPhase === 'moving') {
-            speedX += Math.sin(angle) * 0.003;
-            speedY += Math.cos(angle) * 0.003;
-            speedX *= 0.99;
-            speedY *= 0.99;
-            x += speedX;
-            y += speedY;
-
-            if (x <= 0 || x >= 95) { speedX = -speedX * 0.8; x = x <= 0 ? 0 : 95; angle += Math.PI / 4; }
-            if (y <= 0 || y >= 95) { speedY = -speedY * 0.8; y = y <= 0 ? 0 : 95; angle += Math.PI / 4; }
-
-            if (teleportTimer <= 0) { teleportPhase = 'stopping'; teleportTimer = 30; }
-
-          } else if (teleportPhase === 'stopping') {
-            speedX *= 0.85;
-            speedY *= 0.85;
-            x += speedX;
-            y += speedY;
-            if (teleportTimer <= 0) { teleportPhase = 'fading-out'; teleportTimer = 20; speedX = 0; speedY = 0; }
-
-          } else if (teleportPhase === 'fading-out') {
-            // CSS animation handles the visual fade — just advance the phase
-            opacity = 0;
-            if (teleportTimer <= 0) { teleportPhase = 'teleporting'; teleportTimer = 5; }
-
-          } else if (teleportPhase === 'teleporting') {
-            if (teleportTimer <= 0) {
-              x = Math.random() * 90;
-              y = Math.random() * 90;
-              speedX = (Math.random() - 0.5) * 0.15;
-              speedY = (Math.random() - 0.5) * 0.15;
-              angle = Math.random() * Math.PI * 2;
-              teleportPhase = 'fading-in';
-              teleportTimer = 20;
+            // dying → animate toward trash center, shrink, then remove
+            if (teleportPhase === 'dying') {
+              const prog = Math.min(1, (dyingProgress ?? 0) + 0.06);
+              const tx = dyingTargetX ?? x;
+              const ty = dyingTargetY ?? y;
+              return {
+                ...ghost,
+                x: x + (tx - x) * 0.18,
+                y: y + (ty - y) * 0.18,
+                opacity: 1 - prog,
+                spinX: ghost.spinX + 25,
+                spinY: ghost.spinY + 40,
+                dyingProgress: prog,
+              };
             }
 
-          } else if (teleportPhase === 'fading-in') {
-            // CSS animation handles the visual fade — just advance the phase
-            opacity = 1;
-            if (teleportTimer <= 0) { teleportPhase = 'moving'; teleportTimer = Math.random() * 600 + 300; }
-          }
+            angle += 0.015;
+            teleportTimer -= 1;
+            spinX *= 0.92;
+            spinY *= 0.92;
 
-          return { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY };
-        })
+            if (teleportPhase === 'moving') {
+              speedX += Math.sin(angle) * 0.003;
+              speedY += Math.cos(angle) * 0.003;
+              speedX *= 0.99;
+              speedY *= 0.99;
+              x += speedX;
+              y += speedY;
+
+              if (x <= 0 || x >= 95) { speedX = -speedX * 0.8; x = x <= 0 ? 0 : 95; angle += Math.PI / 4; }
+              if (y <= 0 || y >= 95) { speedY = -speedY * 0.8; y = y <= 0 ? 0 : 95; angle += Math.PI / 4; }
+
+              if (teleportTimer <= 0) { teleportPhase = 'stopping'; teleportTimer = 30; }
+
+            } else if (teleportPhase === 'stopping') {
+              speedX *= 0.85;
+              speedY *= 0.85;
+              x += speedX;
+              y += speedY;
+              if (teleportTimer <= 0) { teleportPhase = 'fading-out'; teleportTimer = 20; speedX = 0; speedY = 0; }
+
+            } else if (teleportPhase === 'fading-out') {
+              opacity = 0;
+              if (teleportTimer <= 0) { teleportPhase = 'teleporting'; teleportTimer = 5; }
+
+            } else if (teleportPhase === 'teleporting') {
+              if (teleportTimer <= 0) {
+                x = Math.random() * 90;
+                y = Math.random() * 90;
+                speedX = (Math.random() - 0.5) * 0.15;
+                speedY = (Math.random() - 0.5) * 0.15;
+                angle = Math.random() * Math.PI * 2;
+                teleportPhase = 'fading-in';
+                teleportTimer = 20;
+              }
+
+            } else if (teleportPhase === 'fading-in') {
+              opacity = 1;
+              if (teleportTimer <= 0) { teleportPhase = 'moving'; teleportTimer = Math.random() * 600 + 300; }
+            }
+
+            return { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY };
+          })
       );
     }
 
@@ -115,6 +207,7 @@ export default function FloatingGhosts(): React.ReactNode {
     dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
     setGhosts((prev) => prev.map((g, i) => i === idx ? { ...g, isDragging: true, opacity: 1, teleportTimer: 300, teleportPhase: 'moving' } : g));
+    setAnyDragging(true);
   };
 
   const handleGhostMouseEnter = (_idx: number, e: React.MouseEvent) => {
@@ -147,6 +240,8 @@ export default function FloatingGhosts(): React.ReactNode {
       const dy = e.clientY - lastMousePosRef.current.y;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
 
+      setTrashHover(isOverTrash(e.clientX, e.clientY));
+
       setGhosts((prev) => prev.map((g, i) => i === idx ? {
         ...g,
         x: Math.max(0, Math.min(95, ((e.clientX - dragOffsetRef.current.x) / window.innerWidth) * 100)),
@@ -156,14 +251,40 @@ export default function FloatingGhosts(): React.ReactNode {
       } : g));
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (draggedGhostRef.current === null) return;
       const idx = draggedGhostRef.current;
-      setGhosts((prev) => prev.map((g, i) => i === idx
-        ? { ...g, isDragging: false, speedX: (Math.random() - 0.5) * 0.15, speedY: (Math.random() - 0.5) * 0.15, teleportPhase: 'moving', teleportTimer: Math.random() * 600 + 300 }
-        : g
-      ));
       draggedGhostRef.current = null;
+      setTrashHover(false);
+      setAnyDragging(false);
+
+      if (isOverTrash(e.clientX, e.clientY) && trashRef.current) {
+        // Get trash center in vw/vh %
+        const rect = trashRef.current.getBoundingClientRect();
+        const tx = ((rect.left + rect.width / 2) / window.innerWidth) * 100;
+        const ty = ((rect.top + rect.height / 2) / window.innerHeight) * 100;
+
+        // Start dying animation
+        setGhosts((prev) => prev.map((g, i) => i === idx
+          ? { ...g, isDragging: false, teleportPhase: 'dying', dyingProgress: 0, dyingTargetX: tx, dyingTargetY: ty }
+          : g
+        ));
+
+        // Trash shakes and bursts after a moment
+        setTimeout(() => {
+          setTrashShake(true);
+          spawnParticles(
+            ((rect.left + rect.width / 2) / window.innerWidth) * 100,
+            ((rect.top + rect.height / 2) / window.innerHeight) * 100,
+          );
+          setTimeout(() => setTrashShake(false), 600);
+        }, 400);
+      } else {
+        setGhosts((prev) => prev.map((g, i) => i === idx
+          ? { ...g, isDragging: false, speedX: (Math.random() - 0.5) * 0.15, speedY: (Math.random() - 0.5) * 0.15, teleportPhase: 'moving', teleportTimer: Math.random() * 600 + 300 }
+          : g
+        ));
+      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -172,18 +293,43 @@ export default function FloatingGhosts(): React.ReactNode {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [isOverTrash, spawnParticles]);
 
   return (
     <div className={styles.ghostContainer}>
+      {/* Trash can */}
+      <pre
+        ref={trashRef}
+        className={`${styles.trashCan} ${anyDragging ? styles.trashVisible : ''} ${trashHover ? styles.trashHover : ''} ${trashShake ? styles.trashShake : ''}`}
+      >
+        {trashHover ? TRASH_ART_OPEN : TRASH_ART_CLOSED}
+      </pre>
+
+      {/* Particles */}
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className={styles.particle}
+          style={{
+            left: `${p.x}vw`,
+            top: `${p.y}vh`,
+            opacity: p.opacity,
+            color: p.color,
+          }}
+        >
+          {p.char}
+        </span>
+      ))}
+
+      {/* Ghosts */}
       {ghosts.map((ghost, idx) => (
         <pre
           key={idx}
-          className={`${styles.ghost} ${ghost.isDragging ? styles.dragging : ''} ${ghost.teleportPhase === 'fading-out' || ghost.teleportPhase === 'teleporting' ? styles.fadingOut : ''} ${ghost.teleportPhase === 'fading-in' ? styles.fadingIn : ''}`}
+          className={`${styles.ghost} ${ghost.isDragging ? styles.dragging : ''} ${ghost.teleportPhase === 'fading-out' || ghost.teleportPhase === 'teleporting' ? styles.fadingOut : ''} ${ghost.teleportPhase === 'fading-in' ? styles.fadingIn : ''} ${ghost.teleportPhase === 'dying' ? styles.dying : ''}`}
           style={{
             left: `${ghost.x}%`,
             top: `${ghost.y}%`,
-            transform: `perspective(1000px) rotateX(${ghost.spinX}deg) rotateY(${ghost.spinY}deg)`,
+            transform: `perspective(1000px) rotateX(${ghost.spinX}deg) rotateY(${ghost.spinY}deg) scale(${ghost.teleportPhase === 'dying' ? Math.max(0.05, 1 - (ghost.dyingProgress ?? 0) * 0.95) : 1})`,
             opacity: ghost.opacity,
             cursor: ghost.isDragging ? 'grabbing' : 'grab',
           }}
