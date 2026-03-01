@@ -6,8 +6,8 @@ I'm a curious individual that happen to be really into electronics and computing
 ## What I Do At Work
 
 ### Damotech
-I work at Damotech. I'm a QA there.
-Basically, I test changes that devs receive straight from copilot (jk, they are good devs.)
+I worked at Damotech. I'm a QA there.
+Basically, I tested changes that devs receive straight from copilot (jk, they are good devs.)
 and I make automated tests to make sure things don't break without notice.
 
 ### GSI
@@ -15,10 +15,18 @@ I was a software developer in test at GSI now grain and protein technology.
 the test system was more complex cause it was hardware in the loop.
 I was writing automated tests, maintaining internal APIs, working on internal tooling.
 
-## What I Do For Fun
+## What Brings me joy
 I'm someone that love building stuff.
 What I like the most I would say is embedded, compilers/interpreters, and web development.
-I think my biggest project yet is spinashlang, a quantum language. I'm still working on it.
+I think my coolest personal project yet is spinashlang, a quantum language. I'm still working on it.
+
+Aside from the builder part of me. I love horror. I read and watch a lot of horror.
+If I would choose one movie to be my favorite right now, I think I would go with annihilation. 
+That movie make something terrifying can also be beautiful. If you havn't get it yet, I'm really into cosmic horror.
+
+Univercity took a lot of my time so I kinda stopped for some years that art part of myself.
+I'm slowly getting back to it. I like to write and draw so I have some ideas of making a horror zine for fun.
+Let's see how that goes.
 
 ## Studies and the perks they give me
 ### DEP electronic repair 
