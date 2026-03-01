@@ -25,7 +25,8 @@ function generateStars(count: number): Star[] {
   }));
 }
 
-const STARS = generateStars(42);
+const STAR_COUNT = typeof window !== 'undefined' && window.innerWidth <= 768 ? 21 : 42;
+const STARS = generateStars(STAR_COUNT);
 
 export default function NightSky(): React.ReactNode {
   // Stars are static — generated once at module load, rendered via pure CSS.
