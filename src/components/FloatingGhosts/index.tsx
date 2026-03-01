@@ -13,16 +13,15 @@ interface GhostPosition {
   isDragging?: boolean;
   spinX: number;
   spinY: number;
-  // elimination animation
-  dyingProgress?: number; // 0→1
+  dyingProgress?: number;
   dyingTargetX?: number;
   dyingTargetY?: number;
 }
 
 interface Particle {
   id: number;
-  x: number; // vw %
-  y: number; // vh %
+  x: number;
+  y: number;
   vx: number;
   vy: number;
   char: string;
@@ -57,11 +56,16 @@ const TICK_MS = 50;
 let particleIdCounter = 0;
 
 export default function FloatingGhosts(): React.ReactNode {
-  const [ghosts, setGhosts] = useState<GhostPosition[]>([
-    { x: 10, y: 20, speedX: 0.08, speedY: 0.05, angle: 0, opacity: 1, teleportTimer: Math.random() * 200 + 100, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-    { x: 60, y: 50, speedX: -0.06, speedY: 0.09, angle: Math.PI / 3, opacity: 1, teleportTimer: Math.random() * 200 + 150, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-    { x: 30, y: 80, speedX: 0.05, speedY: -0.08, angle: Math.PI / 2, opacity: 1, teleportTimer: Math.random() * 200 + 200, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-  ]);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+  const [ghosts, setGhosts] = useState<GhostPosition[]>(() => {
+    const all: GhostPosition[] = [
+      { x: 10, y: 20, speedX: 0.08, speedY: 0.05, angle: 0, opacity: 1, teleportTimer: Math.random() * 200 + 100, teleportPhase: 'moving', spinX: 0, spinY: 0 },
+      { x: 60, y: 50, speedX: -0.06, speedY: 0.09, angle: Math.PI / 3, opacity: 1, teleportTimer: Math.random() * 200 + 150, teleportPhase: 'moving', spinX: 0, spinY: 0 },
+      { x: 30, y: 80, speedX: 0.05, speedY: -0.08, angle: Math.PI / 2, opacity: 1, teleportTimer: Math.random() * 200 + 200, teleportPhase: 'moving', spinX: 0, spinY: 0 },
+    ];
+    return isMobile ? [all[0]] : all;
+  });
 
   const [particles, setParticles] = useState<Particle[]>([]);
   const [trashHover, setTrashHover] = useState(false);
@@ -70,16 +74,15 @@ export default function FloatingGhosts(): React.ReactNode {
 
   const draggedGhostRef = useRef<number | null>(null);
   const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const lastMousePosRef = useRef<{ x: number; y: number; time: number }>({ x: 0, y: 0, time: Date.now() });
+  const lastPosPosRef = useRef<{ x: number; y: number; time: number }>({ x: 0, y: 0, time: Date.now() });
   const rafRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(Date.now());
   const trashRef = useRef<HTMLPreElement | null>(null);
 
-  // Check if current drag position is over the trash can
   const isOverTrash = useCallback((clientX: number, clientY: number) => {
     if (!trashRef.current) return false;
     const rect = trashRef.current.getBoundingClientRect();
-    const pad = 30;
+    const pad = 40; // bigger hit area for fat fingers
     return (
       clientX >= rect.left - pad &&
       clientX <= rect.right + pad &&
@@ -97,7 +100,7 @@ export default function FloatingGhosts(): React.ReactNode {
         x: trashX,
         y: trashY,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5, // slight upward bias
+        vy: Math.sin(angle) * speed - 0.5,
         char: PARTICLE_CHARS[Math.floor(Math.random() * PARTICLE_CHARS.length)],
         opacity: 1,
         color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
@@ -111,7 +114,6 @@ export default function FloatingGhosts(): React.ReactNode {
     if (now - lastTickRef.current >= TICK_MS) {
       lastTickRef.current = now;
 
-      // Tick particles
       setParticles((prev) =>
         prev
           .map((p) => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.06, opacity: p.opacity - 0.035 }))
@@ -126,7 +128,6 @@ export default function FloatingGhosts(): React.ReactNode {
 
             let { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY } = ghost;
 
-            // dying → animate toward trash center, shrink, then remove
             if (teleportPhase === 'dying') {
               const prog = Math.min(1, (dyingProgress ?? 0) + 0.06);
               const tx = dyingTargetX ?? x;
@@ -200,30 +201,87 @@ export default function FloatingGhosts(): React.ReactNode {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [tick]);
 
-  const handleMouseDown = (idx: number, e: React.MouseEvent) => {
-    e.preventDefault();
+  // ── Shared pointer logic ──────────────────────────────────────────────────
+
+  const startDrag = useCallback((idx: number, clientX: number, clientY: number, el: HTMLElement) => {
     draggedGhostRef.current = idx;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    const rect = el.getBoundingClientRect();
+    dragOffsetRef.current = { x: clientX - rect.left, y: clientY - rect.top };
+    lastPosPosRef.current = { x: clientX, y: clientY, time: Date.now() };
     setGhosts((prev) => prev.map((g, i) => i === idx ? { ...g, isDragging: true, opacity: 1, teleportTimer: 300, teleportPhase: 'moving' } : g));
     setAnyDragging(true);
+  }, []);
+
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
+    if (draggedGhostRef.current === null) return;
+    const idx = draggedGhostRef.current;
+    const dx = clientX - lastPosPosRef.current.x;
+    const dy = clientY - lastPosPosRef.current.y;
+    lastPosPosRef.current = { x: clientX, y: clientY, time: Date.now() };
+
+    setTrashHover(isOverTrash(clientX, clientY));
+
+    setGhosts((prev) => prev.map((g, i) => i === idx ? {
+      ...g,
+      x: Math.max(0, Math.min(95, ((clientX - dragOffsetRef.current.x) / window.innerWidth) * 100)),
+      y: Math.max(0, Math.min(95, ((clientY - dragOffsetRef.current.y) / window.innerHeight) * 100)),
+      spinX: Math.max(-60, Math.min(60, dy * 3)),
+      spinY: Math.max(-60, Math.min(60, dx * 3)),
+    } : g));
+  }, [isOverTrash]);
+
+  const endDrag = useCallback((clientX: number, clientY: number) => {
+    if (draggedGhostRef.current === null) return;
+    const idx = draggedGhostRef.current;
+    draggedGhostRef.current = null;
+    setTrashHover(false);
+    setAnyDragging(false);
+
+    if (isOverTrash(clientX, clientY) && trashRef.current) {
+      const rect = trashRef.current.getBoundingClientRect();
+      const tx = ((rect.left + rect.width / 2) / window.innerWidth) * 100;
+      const ty = ((rect.top + rect.height / 2) / window.innerHeight) * 100;
+
+      setGhosts((prev) => prev.map((g, i) => i === idx
+        ? { ...g, isDragging: false, teleportPhase: 'dying', dyingProgress: 0, dyingTargetX: tx, dyingTargetY: ty }
+        : g
+      ));
+
+      setTimeout(() => {
+        setTrashShake(true);
+        spawnParticles(
+          ((rect.left + rect.width / 2) / window.innerWidth) * 100,
+          ((rect.top + rect.height / 2) / window.innerHeight) * 100,
+        );
+        setTimeout(() => setTrashShake(false), 600);
+      }, 400);
+    } else {
+      setGhosts((prev) => prev.map((g, i) => i === idx
+        ? { ...g, isDragging: false, speedX: (Math.random() - 0.5) * 0.15, speedY: (Math.random() - 0.5) * 0.15, teleportPhase: 'moving', teleportTimer: Math.random() * 600 + 300 }
+        : g
+      ));
+    }
+  }, [isOverTrash, spawnParticles]);
+
+  // ── Mouse handlers ────────────────────────────────────────────────────────
+
+  const handleMouseDown = (idx: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    startDrag(idx, e.clientX, e.clientY, e.currentTarget as HTMLElement);
   };
 
   const handleGhostMouseEnter = (_idx: number, e: React.MouseEvent) => {
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    lastPosPosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
   };
 
   const handleGhostMouseMove = (idx: number, e: React.MouseEvent) => {
     if (draggedGhostRef.current !== null) return;
-
     const now = Date.now();
-    const timeDiff = Math.max(now - lastMousePosRef.current.time, 1);
-    const dx = e.clientX - lastMousePosRef.current.x;
-    const dy = e.clientY - lastMousePosRef.current.y;
+    const timeDiff = Math.max(now - lastPosPosRef.current.time, 1);
+    const dx = e.clientX - lastPosPosRef.current.x;
+    const dy = e.clientY - lastPosPosRef.current.y;
     const speed = Math.sqrt(dx * dx + dy * dy) / timeDiff;
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: now };
-
+    lastPosPosRef.current = { x: e.clientX, y: e.clientY, time: now };
     if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
       setGhosts((prev) => prev.map((g, i) => i === idx
         ? { ...g, spinX: Math.max(-90, Math.min(90, -dy * speed * 5)), spinY: Math.max(-90, Math.min(90, dx * speed * 5)) }
@@ -232,68 +290,47 @@ export default function FloatingGhosts(): React.ReactNode {
     }
   };
 
+  // ── Touch handlers ────────────────────────────────────────────────────────
+
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    e.preventDefault(); // stops scroll from stealing the gesture
+    const touch = e.changedTouches[0];
+    startDrag(idx, touch.clientX, touch.clientY, e.currentTarget as HTMLElement);
+  };
+
+  // ── Global mouse + touch listeners ───────────────────────────────────────
+
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => moveDrag(e.clientX, e.clientY);
+    const onMouseUp   = (e: MouseEvent) => endDrag(e.clientX, e.clientY);
+
+    const onTouchMove = (e: TouchEvent) => {
       if (draggedGhostRef.current === null) return;
-      const idx = draggedGhostRef.current;
-      const dx = e.clientX - lastMousePosRef.current.x;
-      const dy = e.clientY - lastMousePosRef.current.y;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
-
-      setTrashHover(isOverTrash(e.clientX, e.clientY));
-
-      setGhosts((prev) => prev.map((g, i) => i === idx ? {
-        ...g,
-        x: Math.max(0, Math.min(95, ((e.clientX - dragOffsetRef.current.x) / window.innerWidth) * 100)),
-        y: Math.max(0, Math.min(95, ((e.clientY - dragOffsetRef.current.y) / window.innerHeight) * 100)),
-        spinX: Math.max(-60, Math.min(60, dy * 3)),
-        spinY: Math.max(-60, Math.min(60, dx * 3)),
-      } : g));
+      e.preventDefault(); // prevent scroll while dragging
+      const touch = e.changedTouches[0];
+      moveDrag(touch.clientX, touch.clientY);
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (draggedGhostRef.current === null) return;
-      const idx = draggedGhostRef.current;
-      draggedGhostRef.current = null;
-      setTrashHover(false);
-      setAnyDragging(false);
-
-      if (isOverTrash(e.clientX, e.clientY) && trashRef.current) {
-        // Get trash center in vw/vh %
-        const rect = trashRef.current.getBoundingClientRect();
-        const tx = ((rect.left + rect.width / 2) / window.innerWidth) * 100;
-        const ty = ((rect.top + rect.height / 2) / window.innerHeight) * 100;
-
-        // Start dying animation
-        setGhosts((prev) => prev.map((g, i) => i === idx
-          ? { ...g, isDragging: false, teleportPhase: 'dying', dyingProgress: 0, dyingTargetX: tx, dyingTargetY: ty }
-          : g
-        ));
-
-        // Trash shakes and bursts after a moment
-        setTimeout(() => {
-          setTrashShake(true);
-          spawnParticles(
-            ((rect.left + rect.width / 2) / window.innerWidth) * 100,
-            ((rect.top + rect.height / 2) / window.innerHeight) * 100,
-          );
-          setTimeout(() => setTrashShake(false), 600);
-        }, 400);
-      } else {
-        setGhosts((prev) => prev.map((g, i) => i === idx
-          ? { ...g, isDragging: false, speedX: (Math.random() - 0.5) * 0.15, speedY: (Math.random() - 0.5) * 0.15, teleportPhase: 'moving', teleportTimer: Math.random() * 600 + 300 }
-          : g
-        ));
-      }
+      const touch = e.changedTouches[0];
+      endDrag(touch.clientX, touch.clientY);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [isOverTrash, spawnParticles]);
+  }, [moveDrag, endDrag]);
 
   return (
     <div className={styles.ghostContainer}>
@@ -310,12 +347,7 @@ export default function FloatingGhosts(): React.ReactNode {
         <span
           key={p.id}
           className={styles.particle}
-          style={{
-            left: `${p.x}vw`,
-            top: `${p.y}vh`,
-            opacity: p.opacity,
-            color: p.color,
-          }}
+          style={{ left: `${p.x}vw`, top: `${p.y}vh`, opacity: p.opacity, color: p.color }}
         >
           {p.char}
         </span>
@@ -336,6 +368,7 @@ export default function FloatingGhosts(): React.ReactNode {
           onMouseDown={(e) => handleMouseDown(idx, e)}
           onMouseEnter={(e) => handleGhostMouseEnter(idx, e)}
           onMouseMove={(e) => handleGhostMouseMove(idx, e)}
+          onTouchStart={(e) => handleTouchStart(idx, e)}
         >
           {GHOST_ART}
         </pre>
