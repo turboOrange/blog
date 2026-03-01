@@ -1,0 +1,30 @@
+.nightSky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+.star {
+  position: absolute;
+  color: #e0d8ff;
+  font-family: monospace;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 6px #c8b8ff88;
+  user-select: none;
+  animation: twinkle var(--twinkle-duration, 3s) var(--twinkle-delay, 0s) infinite ease-in-out;
+  will-change: opacity;
+}
+
+[data-theme='dark'] .star {
+  color: #d4c8ff;
+  text-shadow: 0 0 8px #a78bfa88;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1; }
+}
