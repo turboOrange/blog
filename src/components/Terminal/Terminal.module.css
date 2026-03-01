@@ -393,6 +393,16 @@
   opacity: 0.8;
 }
 
+/* Welcome banner ASCII art — scales down aggressively on phones */
+.welcomeBanner {
+  margin: 0;
+  white-space: pre;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.28rem, 1.6vw, 0.85rem);
+  line-height: 1.2;
+  color: inherit;
+}
+
 /* ASCII art */
 .ascii {
   color: #bd93f9;
