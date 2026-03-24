@@ -79,7 +79,6 @@ export default function Terminal() {
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
   const [isFlipped, setIsFlipped] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [suggestionIndex, setSuggestionIndex] = useState(-1);
 
   type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
   const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
@@ -392,30 +391,45 @@ export default function Terminal() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Tab') {
       setSuggestions([]);
-      setSuggestionIndex(-1);
     }
     if (e.key === 'Tab') {
       e.preventDefault();
-      if (suggestions.length > 0) {
-        const newIndex = (suggestionIndex + 1) % suggestions.length;
-        setSuggestionIndex(newIndex);
-        setCurrentInput(suggestions[newIndex]);
+      const tokens = [
+        ...Object.keys(commands),
+        'ls blog',
+        'ls /blog',
+        ...blogPosts.map(p => `cat blog/${p.slug}`),
+      ];
+      const input = currentInput.toLowerCase();
+      const matches = tokens.filter(t => t.toLowerCase().startsWith(input));
+      if (matches.length === 0) return;
+      if (matches.length === 1) {
+        setCurrentInput(matches[0]);
+        setSuggestions([]);
+        return;
+      }
+      // Compute longest common prefix across all matches
+      const lcp = matches.reduce((prefix, token) => {
+        let i = 0;
+        while (i < prefix.length && i < token.length && prefix[i].toLowerCase() === token[i].toLowerCase()) i++;
+        return prefix.slice(0, i);
+      });
+      if (lcp.length > currentInput.length) {
+        // Can extend to LCP — do so and reset so next Tab shows the list
+        setCurrentInput(lcp);
+        setSuggestions([]);
       } else {
-        const tokens = [
-          ...Object.keys(commands),
-          'ls blog',
-          'ls /blog',
-          ...blogPosts.map(p => `cat blog/${p.slug}`),
-        ];
-        const input = currentInput.toLowerCase();
-        const matches = tokens.filter(t => t.toLowerCase().startsWith(input));
-        if (matches.length === 0) return;
-        if (matches.length === 1) {
-          setCurrentInput(matches[0]);
-        } else {
+        // Already at the split point: show completions list once
+        if (suggestions.length === 0) {
+          setLines(prev => [...prev, {
+            type: 'output',
+            content: (
+              <div className={styles.completions}>
+                {matches.map(m => <span key={m} className={styles.completionItem}>{m}</span>)}
+              </div>
+            ),
+          }]);
           setSuggestions(matches);
-          setSuggestionIndex(0);
-          setCurrentInput(matches[0]);
         }
       }
     } else if (e.key === 'Enter') {

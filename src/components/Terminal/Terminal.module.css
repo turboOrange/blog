@@ -423,6 +423,20 @@
   text-shadow: 0 0 12px rgba(189, 147, 249, 0.8), 0 0 30px rgba(189, 147, 249, 0.4);
 }
 
+/* Tab-completion suggestions list */
+.completions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 2rem;
+  padding: 0.2rem 0;
+}
+
+.completionItem {
+  color: #8be9fd;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
 /* Scrollbar styling */
 .terminalBody::-webkit-scrollbar {
   width: 8px;
