@@ -78,6 +78,8 @@ export default function Terminal() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
   const [isFlipped, setIsFlipped] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(-1);
 
   type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
   const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
@@ -388,7 +390,35 @@ export default function Terminal() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key !== 'Tab') {
+      setSuggestions([]);
+      setSuggestionIndex(-1);
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (suggestions.length > 0) {
+        const newIndex = (suggestionIndex + 1) % suggestions.length;
+        setSuggestionIndex(newIndex);
+        setCurrentInput(suggestions[newIndex]);
+      } else {
+        const tokens = [
+          ...Object.keys(commands),
+          'ls blog',
+          'ls /blog',
+          ...blogPosts.map(p => `cat blog/${p.slug}`),
+        ];
+        const input = currentInput.toLowerCase();
+        const matches = tokens.filter(t => t.toLowerCase().startsWith(input));
+        if (matches.length === 0) return;
+        if (matches.length === 1) {
+          setCurrentInput(matches[0]);
+        } else {
+          setSuggestions(matches);
+          setSuggestionIndex(0);
+          setCurrentInput(matches[0]);
+        }
+      }
+    } else if (e.key === 'Enter') {
       handleCommand(currentInput);
       setCurrentInput('');
     } else if (e.key === 'ArrowUp') {
