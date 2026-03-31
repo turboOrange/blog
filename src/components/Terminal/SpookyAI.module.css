@@ -1,0 +1,462 @@
+/* ── Full-screen dim backdrop ─────────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  border-radius: 12px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: rgba(10, 8, 14, 0.60);
+  backdrop-filter: blur(4px);
+}
+
+.overlayVisible {
+  opacity: 1;
+}
+
+/* ── The actual window panel ─────────────────────────────────────────────── */
+.window {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #0d0d12;
+  border-radius: 12px;
+  overflow: hidden;
+  transform: scale(0.97) translateY(8px);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+  font-family: 'Courier New', monospace;
+  border: 1px solid rgba(189, 147, 249, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(189, 147, 249, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    0 0 80px rgba(157, 78, 221, 0.08);
+}
+
+.windowVisible {
+  transform: scale(1) translateY(0);
+}
+
+/* ── Header bar ──────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.1rem;
+  background: #0f0e17;
+  border-bottom: 1px solid rgba(189, 147, 249, 0.15);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.diamond {
+  color: #bd93f9;
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px rgba(189, 147, 249, 0.8), 0 0 20px rgba(189, 147, 249, 0.4);
+  animation: diamondPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes diamondPulse {
+  0%, 100% { text-shadow: 0 0 10px rgba(189, 147, 249, 0.8), 0 0 20px rgba(189, 147, 249, 0.4); }
+  50%       { text-shadow: 0 0 18px rgba(189, 147, 249, 1.0), 0 0 36px rgba(189, 147, 249, 0.7), 0 0 50px rgba(255, 121, 198, 0.3); }
+}
+
+.brandName {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.modelBadge {
+  color: rgba(255, 121, 198, 0.8);
+  font-size: 0.72rem;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 121, 198, 0.08);
+  border: 1px solid rgba(255, 121, 198, 0.22);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #bd93f9;
+  animation: blink 1.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.statusText {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.45);
+  width: 22px;
+  height: 22px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: #ff5555;
+  border-color: rgba(255, 85, 85, 0.4);
+  background: rgba(255, 85, 85, 0.08);
+}
+
+/* ── Toolbar strip ───────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 1.1rem;
+  background: rgba(189, 147, 249, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+}
+
+.toolbarItem {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.68rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.toolbarSep {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 0.68rem;
+}
+
+/* ── Chat area ───────────────────────────────────────────────────────────── */
+.chatArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.chatArea::-webkit-scrollbar { width: 6px; }
+.chatArea::-webkit-scrollbar-track { background: transparent; }
+.chatArea::-webkit-scrollbar-thumb { background: rgba(189, 147, 249, 0.25); border-radius: 3px; }
+.chatArea::-webkit-scrollbar-thumb:hover { background: rgba(189, 147, 249, 0.45); }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 3rem 0;
+  opacity: 0.6;
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.emptyTitle {
+  color: #fff;
+  font-size: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+}
+
+.emptySubtitle {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.82rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Message rows ────────────────────────────────────────────────────────── */
+.message {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  animation: fadeSlideIn 0.2s ease;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.user {
+  flex-direction: row-reverse;
+}
+
+.msgAvatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.userAvatar {
+  background: rgba(255, 121, 198, 0.12);
+  border: 1px solid rgba(255, 121, 198, 0.3);
+  color: #ff79c6;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.aiAvatar {
+  background: rgba(189, 147, 249, 0.12);
+  border: 1px solid rgba(189, 147, 249, 0.35);
+  color: #bd93f9;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.aiAvatarThinking {
+  animation: spinGlow 1.5s linear infinite;
+}
+
+@keyframes spinGlow {
+  0%   { text-shadow: 0 0 8px rgba(189, 147, 249, 0.8); }
+  25%  { text-shadow: 4px 0 12px rgba(255, 121, 198, 1); }
+  50%  { text-shadow: 0 4px 8px rgba(189, 147, 249, 0.9); }
+  75%  { text-shadow: -4px 0 12px rgba(255, 121, 198, 1); }
+  100% { text-shadow: 0 0 8px rgba(189, 147, 249, 0.8); }
+}
+
+.msgContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 75%;
+}
+
+.user .msgContent {
+  align-items: flex-end;
+}
+
+.aiName {
+  font-size: 0.68rem;
+  color: rgba(189, 147, 249, 0.65);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.msgText {
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* AI message bubble */
+.assistant .msgText {
+  background: rgba(189, 147, 249, 0.07);
+  border: 1px solid rgba(189, 147, 249, 0.18);
+  color: rgba(230, 210, 255, 0.92);
+  border-top-left-radius: 2px;
+}
+
+/* User message bubble */
+.user .msgText {
+  background: rgba(255, 121, 198, 0.08);
+  border: 1px solid rgba(255, 121, 198, 0.2);
+  color: rgba(255, 200, 235, 0.92);
+  border-top-right-radius: 2px;
+  text-align: right;
+}
+
+/* ── Thinking block ───────────────────────────────────────────────────────── */
+.thinkingBlock {
+  background: rgba(189, 147, 249, 0.04);
+  border: 1px solid rgba(189, 147, 249, 0.14);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 220px;
+}
+
+.thinkingHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.thinkingChevron {
+  color: rgba(189, 147, 249, 0.5);
+  font-size: 0.6rem;
+}
+
+.thinkingLabel {
+  color: rgba(189, 147, 249, 0.8);
+  font-size: 0.75rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.thinkingStep {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.72rem;
+  font-family: 'Courier New', monospace;
+  padding-left: 0.9rem;
+  min-height: 1.1rem;
+}
+
+/* ── Input area ──────────────────────────────────────────────────────────── */
+.inputArea {
+  padding: 0.85rem 1.1rem 1rem;
+  border-top: 1px solid rgba(189, 147, 249, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(189, 147, 249, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s;
+}
+
+.inputWrapper:focus-within {
+  border-color: rgba(189, 147, 249, 0.55);
+  box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.08);
+}
+
+.inputPrompt {
+  color: rgba(189, 147, 249, 0.7);
+  font-size: 1.1rem;
+  font-weight: 300;
+  line-height: 1;
+  user-select: none;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.88rem;
+  caret-color: #bd93f9;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sendBtn {
+  background: rgba(189, 147, 249, 0.12);
+  border: 1px solid rgba(189, 147, 249, 0.35);
+  border-radius: 5px;
+  color: #bd93f9;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background: rgba(255, 121, 198, 0.18);
+  border-color: rgba(255, 121, 198, 0.55);
+  color: #ff79c6;
+}
+
+.sendBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.inputHint {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.65rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+}
+
+.inputHint kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  font-family: inherit;
+  font-size: 0.65rem;
+}
+

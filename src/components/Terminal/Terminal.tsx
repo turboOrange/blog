@@ -3,6 +3,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import { usePluginData } from '@docusaurus/useGlobalData';
 import styles from './Terminal.module.css';
 import MarkdownRenderer from './MarkdownRenderer';
+import SpookyAI from './SpookyAI';
 
 interface TerminalLine {
   type: 'command' | 'output' | 'system';
@@ -79,6 +80,7 @@ export default function Terminal() {
   const [markdownContent, setMarkdownContent] = useState<Record<string, string>>({});
   const [isFlipped, setIsFlipped] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [spookyAiOpen, setSpookyAiOpen] = useState(false);
 
   type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
   const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
@@ -287,6 +289,11 @@ export default function Terminal() {
       description: 'Show help information',
       execute: () => <MarkdownRenderer content={`# Terminal Help\n\n- Type a command and press Enter\n- Use ↑/↓ arrow keys to navigate history\n- Type 'menu' to see all commands\n- Type 'clear' to clear the screen`} />,
     },
+    spookyai: {
+      name: 'spookyai',
+      description: 'Launch SpookyAI assistant 👻 The most powerfull client side AI every made in human history. It can do anything... but it refuses to do anything.',
+      execute: () => null,
+    },
     blog: {
       name: 'blog',
       description: 'List all blog posts  (also: ls blog)',
@@ -336,6 +343,7 @@ export default function Terminal() {
     setLines((prev) => [...prev, { type: 'command', content: `$ ${cmd}` }]);
     if (!trimmedCmd) return;
     if (trimmedCmd === 'clear') { setLines([]); return; }
+    if (trimmedCmd === 'spookyai') { setSpookyAiOpen(true); return; }
     // cat is ONLY allowed as `cat blog/<slug>` — block everything else
     if (trimmedCmd.startsWith('cat ') && !trimmedCmd.match(/^cat\s+blog\/[^\s/]+$/)) {
       setLines((prev) => [...prev, {
@@ -503,6 +511,14 @@ export default function Terminal() {
               </div>
             )}
           </div>
+
+          {/* SpookyAI overlay — mounts inside the terminal container */}
+          {spookyAiOpen && (
+            <SpookyAI onClose={() => {
+              setSpookyAiOpen(false);
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }} />
+          )}
         </div>
 
         {/* BACK OVERLAY — absolutely covers the terminal, mirrored + frosted.
