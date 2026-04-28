@@ -1,5 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import styles from './styles.module.css';
+import GhostReveal from './GhostReveal';
+
+const GHOST_NAMES = [
+  'Casper', 'Boo', 'Morticia', 'Wail', 'Spectre', 'Phantom',
+  'Grimshaw', 'Nyx', 'Vex', 'Haunt', 'Mist', 'Shade',
+  'Duskmore', 'Gloom', 'Spook', 'Wraith', 'Eerie', 'Lurk',
+  'Flicker', 'Hollow', 'Seraph', 'Banshee', 'Cobweb', 'Omen',
+];
 
 interface GhostPosition {
   x: number;
@@ -16,6 +24,7 @@ interface GhostPosition {
   dyingProgress?: number;
   dyingTargetX?: number;
   dyingTargetY?: number;
+  color: string;
 }
 
 interface Particle {
@@ -51,21 +60,18 @@ const TRASH_ART_OPEN = `
 
 const PARTICLE_CHARS = ['👻', '💀', '✨', '*', '·', '°', '~', '¬', '░', '▒'];
 const PARTICLE_COLORS = ['#a78bfa', '#f472b6', '#67e8f9', '#fde68a', '#86efac'];
+export const GHOST_COLORS = ['#a78bfa', '#f472b6', '#67e8f9', '#86efac', '#fbbf24', '#fb923c'];
 
 const TICK_MS = 50;
 let particleIdCounter = 0;
 
 export default function FloatingGhosts(): React.ReactNode {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
-  const [ghosts, setGhosts] = useState<GhostPosition[]>(() => {
-    const all: GhostPosition[] = [
-      { x: 10, y: 20, speedX: 0.08, speedY: 0.05, angle: 0, opacity: 1, teleportTimer: Math.random() * 200 + 100, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-      { x: 60, y: 50, speedX: -0.06, speedY: 0.09, angle: Math.PI / 3, opacity: 1, teleportTimer: Math.random() * 200 + 150, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-      { x: 30, y: 80, speedX: 0.05, speedY: -0.08, angle: Math.PI / 2, opacity: 1, teleportTimer: Math.random() * 200 + 200, teleportPhase: 'moving', spinX: 0, spinY: 0 },
-    ];
-    return isMobile ? [all[0]] : all;
-  });
+  const [ghosts, setGhosts] = useState<GhostPosition[]>([]);
+
+  // lootbox reveal queue: each entry is {ghost, name}
+  interface RevealEntry { ghost: GhostPosition; name: string; }
+  const [revealQueue, setRevealQueue] = useState<RevealEntry[]>([]);
 
   const [particles, setParticles] = useState<Particle[]>([]);
   const [trashHover, setTrashHover] = useState(false);
@@ -126,7 +132,7 @@ export default function FloatingGhosts(): React.ReactNode {
           .map((ghost) => {
             if (ghost.isDragging) return ghost;
 
-            let { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY } = ghost;
+            let { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY, color } = ghost;
 
             if (teleportPhase === 'dying') {
               const prog = Math.min(1, (dyingProgress ?? 0) + 0.06);
@@ -188,7 +194,7 @@ export default function FloatingGhosts(): React.ReactNode {
               if (teleportTimer <= 0) { teleportPhase = 'moving'; teleportTimer = Math.random() * 600 + 300; }
             }
 
-            return { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY };
+            return { x, y, speedX, speedY, angle, opacity, teleportTimer, teleportPhase, spinX, spinY, dyingProgress, dyingTargetX, dyingTargetY, color };
           })
       );
     }
@@ -200,6 +206,52 @@ export default function FloatingGhosts(): React.ReactNode {
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [tick]);
+
+  // ── Custom event listeners for terminal commands ──────────────────────────
+
+  useEffect(() => {
+    const handleSummon = () => {
+      const color = GHOST_COLORS[Math.floor(Math.random() * GHOST_COLORS.length)];
+      const name = GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
+      const newGhost: GhostPosition = {
+        x: Math.random() * 85 + 5,
+        y: Math.random() * 80 + 5,
+        speedX: (Math.random() - 0.5) * 0.14,
+        speedY: (Math.random() - 0.5) * 0.14,
+        angle: Math.random() * Math.PI * 2,
+        opacity: 1,
+        teleportTimer: Math.random() * 400 + 200,
+        teleportPhase: 'fading-in',
+        spinX: 0,
+        spinY: 0,
+        color,
+      };
+      setRevealQueue((prev) => [...prev, { ghost: newGhost, name }]);
+    };
+
+    const handleKillAll = () => {
+      setGhosts((prev) =>
+        prev.map((g) =>
+          g.teleportPhase === 'dying'
+            ? g
+            : {
+                ...g,
+                teleportPhase: 'dying',
+                dyingProgress: 0,
+                dyingTargetX: Math.random() * 90,
+                dyingTargetY: Math.random() * 90,
+              }
+        )
+      );
+    };
+
+    window.addEventListener('summon-ghost', handleSummon);
+    window.addEventListener('kill-ghosts', handleKillAll);
+    return () => {
+      window.removeEventListener('summon-ghost', handleSummon);
+      window.removeEventListener('kill-ghosts', handleKillAll);
+    };
+  }, []);
 
   // ── Shared pointer logic ──────────────────────────────────────────────────
 
@@ -334,6 +386,19 @@ export default function FloatingGhosts(): React.ReactNode {
 
   return (
     <div className={styles.ghostContainer}>
+      {/* Lootbox reveal — one at a time, queue drains naturally */}
+      {revealQueue.length > 0 && (
+        <GhostReveal
+          key={revealQueue[0].name + revealQueue[0].ghost.color + revealQueue[0].ghost.x}
+          ghostColor={revealQueue[0].ghost.color}
+          ghostName={revealQueue[0].name}
+          onDone={() => {
+            const entry = revealQueue[0];
+            setRevealQueue((prev) => prev.slice(1));
+            setGhosts((prev) => [...prev, entry.ghost]);
+          }}
+        />
+      )}
       {/* Trash can */}
       <pre
         ref={trashRef}
@@ -364,6 +429,8 @@ export default function FloatingGhosts(): React.ReactNode {
             transform: `perspective(1000px) rotateX(${ghost.spinX}deg) rotateY(${ghost.spinY}deg) scale(${ghost.teleportPhase === 'dying' ? Math.max(0.05, 1 - (ghost.dyingProgress ?? 0) * 0.95) : 1})`,
             opacity: ghost.opacity,
             cursor: ghost.isDragging ? 'grabbing' : 'grab',
+            color: `${ghost.color}99`,
+            textShadow: `0 0 10px ${ghost.color}cc`,
           }}
           onMouseDown={(e) => handleMouseDown(idx, e)}
           onMouseEnter={(e) => handleGhostMouseEnter(idx, e)}

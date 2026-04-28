@@ -294,6 +294,16 @@ export default function Terminal() {
       description: 'Launch SpookyAI assistant 👻 The most powerfull client side AI every made in human history. It can do anything... but it refuses to do anything.',
       execute: () => null,
     },
+    summon: {
+      name: 'summon',
+      description: 'Summon a ghost 👻 (e.g. `summon` or `summon 3`)',
+      execute: () => null,
+    },
+    killghosts: {
+      name: 'killghosts',
+      description: 'Kill all ghosts 💀',
+      execute: () => null,
+    },
     blog: {
       name: 'blog',
       description: 'List all blog posts  (also: ls blog)',
@@ -344,6 +354,27 @@ export default function Terminal() {
     if (!trimmedCmd) return;
     if (trimmedCmd === 'clear') { setLines([]); return; }
     if (trimmedCmd === 'spookyai') { setSpookyAiOpen(true); return; }
+    // summon [n] — dispatch events to FloatingGhosts
+    if (trimmedCmd === 'summon' || trimmedCmd.match(/^summon\s+\d+$/)) {
+      const countStr = trimmedCmd.split(/\s+/)[1];
+      const count = countStr ? Math.min(parseInt(countStr, 10), 20) : 1;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => window.dispatchEvent(new Event('summon-ghost')), i * 120);
+      }
+      setLines((prev) => [...prev, {
+        type: 'output',
+        content: <div>👻 {count === 1 ? 'A ghost appears...' : `${count} ghosts emerge from the void...`}</div>,
+      }]);
+      return;
+    }
+    if (trimmedCmd === 'killghosts') {
+      window.dispatchEvent(new Event('kill-ghosts'));
+      setLines((prev) => [...prev, {
+        type: 'output',
+        content: <div>💀 Banishing all ghosts...</div>,
+      }]);
+      return;
+    }
     // cat is ONLY allowed as `cat blog/<slug>` — block everything else
     if (trimmedCmd.startsWith('cat ') && !trimmedCmd.match(/^cat\s+blog\/[^\s/]+$/)) {
       setLines((prev) => [...prev, {
