@@ -1,109 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="atom.xsl"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://your-docusaurus-site.example.com/blog</id>
-    <title>My Site Blog</title>
-    <updated>2021-08-26T00:00:00.000Z</updated>
+    <id>https://turboorange.github.io/blog/blog</id>
+    <title>Spooky terminal Blog</title>
+    <updated>2026-03-21T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://your-docusaurus-site.example.com/blog"/>
-    <subtitle>My Site Blog</subtitle>
-    <icon>https://your-docusaurus-site.example.com/img/favicon.ico</icon>
+    <link rel="alternate" href="https://turboorange.github.io/blog/blog"/>
+    <subtitle>Spooky terminal Blog</subtitle>
+    <icon>https://turboorange.github.io/blog/img/favicon.ico</icon>
     <entry>
-        <title type="html"><![CDATA[Welcome]]></title>
-        <id>https://your-docusaurus-site.example.com/blog/welcome</id>
-        <link href="https://your-docusaurus-site.example.com/blog/welcome"/>
-        <updated>2021-08-26T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Docusaurus blogging features are powered by the blog plugin.]]></summary>
-        <content type="html"><![CDATA[<p><a href="https://docusaurus.io/docs/blog" target="_blank" rel="noopener noreferrer" class="">Docusaurus blogging features</a> are powered by the <a href="https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-blog" target="_blank" rel="noopener noreferrer" class="">blog plugin</a>.</p>
-<p>Here are a few tips you might find useful.</p>
-<p>Simply add Markdown files (or folders) to the <code>blog</code> directory.</p>
-<p>Regular blog authors can be added to <code>authors.yml</code>.</p>
-<p>The blog post date can be extracted from filenames, such as:</p>
+        <title type="html"><![CDATA[about reporting issues]]></title>
+        <id>https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues</id>
+        <link href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues"/>
+        <updated>2026-03-21T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Reporting issues can be tricky]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="a-word-before-i-start">A word before I start<a href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues#a-word-before-i-start" class="hash-link" aria-label="Direct link to A word before I start" title="Direct link to A word before I start" translate="no">​</a></h2>
+<p>Just to be clear. My own code is not perfect. It's far from it. There is a lot of architecture decisions I had I wouldn't do it again.
+I also never found any code base that didn't have problems. Everyone, even seniors, are always learning during conception and development in this forever changing field.
+Every UI has UX problems. Every projects has security issues. Every software has bugs.</p>
+<p>The only thing we do is our best.</p>
+<p>I happen to have experience in QA, learned UX evaluation from one of the best professors and have a good understanding of cyber security due to some courses and CTFs.
+I happen to be hyper curious, so when I'm not sure, I explore. I'm the first one to find a way to under the map in a video game.</p>
+<p>With all of this, even if ultimately I just want to build things, I just happen to find a lot of issues with every software I use.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="my-issue-with-reporting">My issue with reporting<a href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues#my-issue-with-reporting" class="hash-link" aria-label="Direct link to My issue with reporting" title="Direct link to My issue with reporting" translate="no">​</a></h2>
+<p>ultimately, i believe that even the smallest issues should be reported just so we can track all the imperfections of a software.</p>
+<p>That utopy is not that easy to reach in real life.</p>
+<p>We all know we should detach ourselves from the code we are writing and not get emotions about it.
+People can still feel personally attacked when we directly criticise a decision they did.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="ux-issues-are-the-worst">UX issues are the worst<a href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues#ux-issues-are-the-worst" class="hash-link" aria-label="Direct link to UX issues are the worst" title="Direct link to UX issues are the worst" translate="no">​</a></h3>
+<p>That's especially true with UX issues. Even if you come with arguments backed by data, people see UX issues reporting as opinions often.
+I got people visibly upset saying that that UI is only used by people that had a course on how to use it so they will know how to use it basically.
+That shows it's optional but not necessarily optimal. The need of a course to use a software is a red flag. It doesn't mean the UI is ultimately bad.
+It's just an opportunity to ask why it's that way. Is it because what we are doing is complicated or is it the UI that's not optimal? It might be both.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="an-example-with-a-horrible-functional-bug">An example with a horrible functional bug<a href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues#an-example-with-a-horrible-functional-bug" class="hash-link" aria-label="Direct link to An example with a horrible functional bug" title="Direct link to An example with a horrible functional bug" translate="no">​</a></h2>
+<p>I even got problems reporting functional issues. That can happen when the issue is so big it can break the release plans of a project. Sometimes managers just wish hard what you're saying is not true because of pressure from above.
+I had to create an automated test that can run for days. That was an actual task I had to do. BTW, that kind of task sucks to do. You start the test, you wait hours for it to break, you fix it and rerun the thing. They didn't even want to give me parallel tasks to do for some reasons but I digress.
+I ended up actually finding a bug with that test. There was a situation that happened after 5 to 7h after the test start where some unexpected things was happening. Really critical unexpected things.
+Considering that the system was made to run for long chunks of times, that was a big deal.
+My problem was that I had no way to replicate it other than with time. So I made a bug report, made it high priority and was ready to move on with another task.
+When the team saw what I did, they asked me to fix the bug in my test. So for almost a month, I didn't have any new tasks. Every day they were asking me to fix the test and I was replying that the test was fine but there is a problem with the tested system.
+Every scrums I was trying to rephrase that my test was done, that I need new tasks and that the system has a big problem.
+They never really acknowledged the problem. I was changed to another team and they kept acting like nothing wrong happened.
+Months ago, I learned that the project was blocked because of an "unexpected bug" that happen in the field. I wish I could say I saved that project but I couldn't this time.</p>
+<p>Sorry for the long story. I just think it's a good case for how issue reporting can be tricky.
+I do not know how I would've been able to change the situation. I wasn't the only actor but there is probably a world where I could've said the right words at the right time and change the outcome.
+What we could keep from that story is that reporting is not just about writing a good bug report. It's also a social activity with imperfect humans. Never assume that they will have the best response by pure logic.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="egg-walks">Egg walks<a href="https://turboorange.github.io/blog/blog/2026/03/21/about-reporting-issues#egg-walks" class="hash-link" aria-label="Direct link to Egg walks" title="Direct link to Egg walks" translate="no">​</a></h2>
+<p>It happened more than once that an issue is shoved away or create tension for me.
+When your job is QA related and it's part of your job to find problems and report them, the tensions can grow if those are not handled properly.
+In a perfect world, we would just need to explain the issue and move one. In real life, some issues need to be introduced carefully to the team.
+Most of issues are actually fine, so you don't always have to walk on eggs. But how can you identify when it's an egg walk?</p>
+<p>Ask yourself:</p>
 <ul>
-<li class=""><code>2019-05-30-welcome.md</code></li>
-<li class=""><code>2019-05-30-welcome/index.md</code></li>
+<li class="">Is this issue a threat to the plans of the company?</li>
+<li class="">Is this issue the result of someone's decision that give them pride? (that include most of UX issues unfortunately)</li>
 </ul>
-<p>A blog post folder can be convenient to co-locate blog post images:</p>
-<p><img decoding="async" loading="lazy" alt="Docusaurus Plushie" src="https://your-docusaurus-site.example.com/assets/images/docusaurus-plushie-banner-a60f7593abca1e3eef26a9afa244e4fb.jpeg" width="1500" height="500" class="img_ev3q"></p>
-<p>The blog supports tags as well!</p>
-<p><strong>And if you don't want a blog</strong>: just delete this directory, and use <code>blog: false</code> in your Docusaurus config.</p>]]></content>
+<p>Then ask yourself:</p>
+<ul>
+<li class="">Is this issue important enough to risk an egg walk?</li>
+</ul>
+<p>If yes, then examine the situation:</p>
+<ul>
+<li class="">What reputation do I have?</li>
+<li class="">What's my title at the moment?</li>
+<li class="">How much authority do I have?</li>
+<li class="">How did the team take similar issues in the past?</li>
+<li class="">Who might have a bad reaction to the news?</li>
+<li class="">Who could I use to back me up?</li>
+</ul>
+<p>Unfortunately, since there is an infinite possible situation, there is no perfect solution.
+Just be aware and don't ask for people to be perfect. Yes, in those situation, the reporter is not the one causing the problem.
+But life is not a blaming game. We have to do the best with what we have.
+Staying aware is the best thing we can do.</p>]]></content>
         <author>
-            <name>Sébastien Lorber</name>
-            <uri>https://sebastienlorber.com</uri>
+            <name>Cedrick Gauthier</name>
+            <uri>https://turboorange.github.io/blog</uri>
         </author>
-        <author>
-            <name>Yangshun Tay</name>
-            <uri>https://linkedin.com/in/yangshun</uri>
-        </author>
-        <category label="Facebook" term="Facebook"/>
-        <category label="Hello" term="Hello"/>
-        <category label="Docusaurus" term="Docusaurus"/>
+        <category label="qa" term="qa"/>
+        <category label="ux" term="ux"/>
+        <category label="cyber security" term="cyber security"/>
     </entry>
     <entry>
-        <title type="html"><![CDATA[MDX Blog Post]]></title>
-        <id>https://your-docusaurus-site.example.com/blog/mdx-blog-post</id>
-        <link href="https://your-docusaurus-site.example.com/blog/mdx-blog-post"/>
-        <updated>2021-08-01T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Blog posts support Docusaurus Markdown features, such as MDX.]]></summary>
-        <content type="html"><![CDATA[<p>Blog posts support <a href="https://docusaurus.io/docs/markdown-features" target="_blank" rel="noopener noreferrer" class="">Docusaurus Markdown features</a>, such as <a href="https://mdxjs.com/" target="_blank" rel="noopener noreferrer" class="">MDX</a>.</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>Use the power of React to create interactive blog posts.</p></div></div>
-<!-- -->
-<p>For example, use JSX to create an interactive button:</p>
-<div class="language-js codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-js codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token operator" style="color:#393A34">&lt;</span><span class="token plain">button onClick</span><span class="token operator" style="color:#393A34">=</span><span class="token punctuation" style="color:#393A34">{</span><span class="token punctuation" style="color:#393A34">(</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token arrow operator" style="color:#393A34">=&gt;</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">alert</span><span class="token punctuation" style="color:#393A34">(</span><span class="token string" style="color:#e3116c">'button clicked!'</span><span class="token punctuation" style="color:#393A34">)</span><span class="token punctuation" style="color:#393A34">}</span><span class="token operator" style="color:#393A34">&gt;</span><span class="token maybe-class-name">Click</span><span class="token plain"> me</span><span class="token operator" style="color:#393A34">!</span><span class="token operator" style="color:#393A34">&lt;</span><span class="token operator" style="color:#393A34">/</span><span class="token plain">button</span><span class="token operator" style="color:#393A34">&gt;</span><br></span></code></pre></div></div>
-<button>Click me!</button>]]></content>
+        <title type="html"><![CDATA[Is Nix good for you?]]></title>
+        <id>https://turboorange.github.io/blog/blog/2026/03/13/is-nix-good-for-you</id>
+        <link href="https://turboorange.github.io/blog/blog/2026/03/13/is-nix-good-for-you"/>
+        <updated>2026-03-13T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[why I started using nix and how is it going so far]]></summary>
+        <content type="html"><![CDATA[<p>I broke my pop!_os setup recently.
+I'm usually careful and got really good at fixing broken things with Linux so while it happen a lot when I started with Linux, I didn't have any problem for decades.
+It was a major release that was going on and someone around me started to be aggressive.
+I didn't want it to heat up in my back pack, didn't want to leave it there. So I had to close it mid update.
+When I opened it, plasma wasn't starting, half of the application was gone and I didn't find any way to recover.
+I believe that a determined Linux user always finds a way but this time I was done after 2 hours.
+I didn't really have to setup everything again. I use a lot of things and it takes a while for me to feel at home on a new linux install.
+Then I randomly thought about how annoying it is to start a new job and get a new computer to configure how you want.
+The absurd thing about all of it is, what I want is just the same thing. I don't care what OS I'm on, I just want that setup I always use to be replicable.
+It sounds dumb but I thought to myself that I'm not alone. Other people have the same frustrations I have.</p>
+<p>Now that I was confronted to that problem again, I looked online and found out about Nix. I mean, I already sort of know about it in surface.
+I wasn't convinced but I told myself it's the best time to try. I downloaded nixos and installed it.</p>
+<h1>What is nix?</h1>
+<p>So nix is a package manager. It's like your apt or pacman if you're using Arch btw. But you don't installed something by doing <code>nix install recall-for-linux</code>.
+Instead you modify file somewhere under /etc/. You add something like this:</p>
+<div class="language-nix codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-nix codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">{</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  environment.systemPackages = with pkgs; [</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    recall-for-linux</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  ];</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">}</span><br></span></code></pre></div></div>
+<p>then you do <code>nixos-rebuild switch</code> or something like that depending on your setup and you pray for the build to succeed. There is no need for reboot, you're already on the new build.
+As a developer, I can see how that makes sense. When you really think about it, dependency declaration files really helped software development.
+I don't think I can really go back to how I did C programing in 2003 (Yeah, I was a kid playing with code::block at the time.)
+I was just installing the libraries and hope they are at a compatible version.
+So why not just using the same principle for the whole system right?</p>
+<p>Now that you know what nix is, let's talk about nixos.</p>
+<h1>What is nixos?</h1>
+<p>NixOS is the Linux distribution that by default use nix as it's only package manager.
+Yop. That's it.</p>
+<h1>what do I think so far about it?</h1>
+<p>I've been playing with it for some time but didn't use all the features yet.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="pros">pros<a href="https://turboorange.github.io/blog/blog/2026/03/13/is-nix-good-for-you#pros" class="hash-link" aria-label="Direct link to pros" title="Direct link to pros" translate="no">​</a></h2>
+<p>So, whatever you think about Nix, you have to admit it's powerful like crazy.</p>
+<ul>
+<li class="">Your setup is fully portable from a computer to an other including VMs.</li>
+<li class="">You can put it in a git repo, update it when you modify something so if something goes bad you have a sort of backup as text.</li>
+<li class="">You can create a VM with your exact setup. This way working on a lesser trusted project like sometime when freelancing is way easier.</li>
+<li class="">If you're not like me, you can also separate your setup with modules. I should really start to do it.</li>
+<li class="">A Linux based config is mostly compatible with nix on windows and macOS so with a bit of will and maybe luke you could literally be prepared day one to work at a new job.</li>
+<li class="">Since it's completely text based it's possible to be helped by any LLM, sort of. In my experience, something like gepetefourpointo would give unusable result. Sonnet 4.6 would be fine tho. For better results maybe use the nix MCP so it doesn't have to duck duck it all the time.</li>
+<li class="">It can do more then just package management. It can handle preferences and plugins for all the applications I tested that with. (nvim, zsh, tmux, intelij, firefox, LibreWolf)</li>
+<li class="">That's a really important one for me: you can install applications at the directory level. Imagine this: Your're at /home/tarsan/ and do <code>python</code>, an error happen. You go to /home/tarsan/project1/ and do the same thing then python2.6 starts. You do the same thing again in /home/tarsan/project2/ and now it's python3.10! For python, it's not that useful cause it already has venv and toml. But for an elixir or C++ project, OMG that's liberating.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="cons">cons<a href="https://turboorange.github.io/blog/blog/2026/03/13/is-nix-good-for-you#cons" class="hash-link" aria-label="Direct link to cons" title="Direct link to cons" translate="no">​</a></h2>
+<p>While I decided to use Nixos for myself, I do see a lot of problems with it. It's just like if everything is a trade off.
+Most people use a browser for most tasks and are scared of terminals and text files.
+I think Nix is really just for developers and maybe IT people. I don't see much other people even wanting to use it.
+I mean, we are really the only people that really need an exact version of a software then an other version of the same software for an other project.
+So here we go.</p>
+<ul>
+<li class="">It's kinda hard to setup. I mean, you have the official documentation, a small community and LLMs seems not trained enough on it so it take some time to get a good it right.</li>
+<li class="">If you use only Nix because you want to have that perfect text based backup of your setup, some install scripts will simply not work.</li>
+<li class="">Official websites for applications will show you how to apt or pacman or brew but probably not how to nix.</li>
+<li class="">That might be a skill issue but every time I want to install something it take some time to just compile the new setup. There might be a way to partial build it but I haven't found it yet.</li>
+</ul>
+<h1>Conclusion</h1>
+<p>If you're not a developer don't even look at it. It's complication for nothing. If you are tho and you're like me, always exploring new stacks, it might be worth it.
+You don't even need to make it the only way to install.</p>
+<p>BTW, my nix setup on my system76 laptop is way easier on the battery then the pop!_os one somehow. That's a bonus I got.</p>
+<p>So, should you, should you not? My situation was a bit special. I had to install an OS anyway. I think if you're a developer and especially if you're working with a stack that's notoriously bad with dependencies management like C, C++, it's definitively something to look at.</p>]]></content>
         <author>
-            <name>Sébastien Lorber</name>
-            <uri>https://sebastienlorber.com</uri>
+            <name>Cedrick Gauthier</name>
+            <uri>https://turboorange.github.io/blog</uri>
         </author>
-        <category label="Docusaurus" term="Docusaurus"/>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Long Blog Post]]></title>
-        <id>https://your-docusaurus-site.example.com/blog/long-blog-post</id>
-        <link href="https://your-docusaurus-site.example.com/blog/long-blog-post"/>
-        <updated>2019-05-29T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[This is the summary of a very long blog post,]]></summary>
-        <content type="html"><![CDATA[<p>This is the summary of a very long blog post,</p>
-<p>Use a <code>&lt;!--</code> <code>truncate</code> <code>--&gt;</code> comment to limit blog post size in the list view.</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>
-<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>]]></content>
-        <author>
-            <name>Yangshun Tay</name>
-            <uri>https://linkedin.com/in/yangshun</uri>
-        </author>
-        <category label="Hello" term="Hello"/>
-        <category label="Docusaurus" term="Docusaurus"/>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[First Blog Post]]></title>
-        <id>https://your-docusaurus-site.example.com/blog/first-blog-post</id>
-        <link href="https://your-docusaurus-site.example.com/blog/first-blog-post"/>
-        <updated>2019-05-28T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Lorem ipsum dolor sit amet...]]></summary>
-        <content type="html"><![CDATA[<p>Lorem ipsum dolor sit amet...</p>
-<p>...consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>]]></content>
-        <author>
-            <name>Sébastien Lorber</name>
-            <uri>https://sebastienlorber.com</uri>
-        </author>
-        <author>
-            <name>Yangshun Tay</name>
-            <uri>https://linkedin.com/in/yangshun</uri>
-        </author>
-        <category label="Hola" term="Hola"/>
-        <category label="Docusaurus" term="Docusaurus"/>
+        <category label="nix" term="nix"/>
     </entry>
 </feed>
