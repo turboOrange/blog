@@ -4,6 +4,7 @@ import { usePluginData } from '@docusaurus/useGlobalData';
 import styles from './Terminal.module.css';
 import MarkdownRenderer from './MarkdownRenderer';
 import SpookyAI from './SpookyAI';
+import SpiritBoard from './SpiritBoard';
 
 interface TerminalLine {
   type: 'command' | 'output' | 'system';
@@ -81,6 +82,8 @@ export default function Terminal() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [spookyAiOpen, setSpookyAiOpen] = useState(false);
+  const [spiritBoardOpen, setSpiritBoardOpen] = useState(false);
+  const [spiritBoardExtreme, setSpiritBoardExtreme] = useState(false);
 
   type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
   const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
@@ -294,6 +297,11 @@ export default function Terminal() {
       description: 'Launch SpookyAI assistant 👻 The most powerfull client side AI every made in human history. It can do anything... but it refuses to do anything.',
       execute: () => null,
     },
+    spiritboard: {
+      name: 'spiritboard',
+      description: 'Open the spirit board 🔮 (also: spiritboard -e / --extreme for the unhinged version)',
+      execute: () => null,
+    },
     summon: {
       name: 'summon',
       description: 'Summon a ghost 👻 (e.g. `summon` or `summon 3`)',
@@ -354,6 +362,12 @@ export default function Terminal() {
     if (!trimmedCmd) return;
     if (trimmedCmd === 'clear') { setLines([]); return; }
     if (trimmedCmd === 'spookyai') { setSpookyAiOpen(true); return; }
+    if (trimmedCmd === 'spiritboard' || trimmedCmd === 'spiritboard -e' || trimmedCmd === 'spiritboard --extreme') {
+      const isExtreme = trimmedCmd.includes('-e') || trimmedCmd.includes('--extreme');
+      setSpiritBoardExtreme(isExtreme);
+      setSpiritBoardOpen(true);
+      return;
+    }
     // summon [n] — dispatch events to FloatingGhosts
     if (trimmedCmd === 'summon' || trimmedCmd.match(/^summon\s+\d+$/)) {
       const countStr = trimmedCmd.split(/\s+/)[1];
@@ -549,6 +563,17 @@ export default function Terminal() {
               setSpookyAiOpen(false);
               setTimeout(() => inputRef.current?.focus(), 100);
             }} />
+          )}
+
+          {/* SpiritBoard overlay */}
+          {spiritBoardOpen && (
+            <SpiritBoard
+              extreme={spiritBoardExtreme}
+              onClose={() => {
+                setSpiritBoardOpen(false);
+                setTimeout(() => inputRef.current?.focus(), 100);
+              }}
+            />
           )}
         </div>
 
