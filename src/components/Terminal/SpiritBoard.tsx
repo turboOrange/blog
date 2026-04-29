@@ -67,7 +67,7 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [hoverProgress, setHoverProgress] = useState(0);
   const [glitchedChars, setGlitchedChars] = useState<Record<number, string>>({});
-  const [visible, setVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const phaseRef = useRef<'waiting' | 'countdown' | 'active'>('waiting');
@@ -81,11 +81,6 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { outputTextRef.current = outputText; }, [outputText]);
 
-  // Animate in
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 20);
-    return () => clearTimeout(t);
-  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -97,8 +92,8 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
   }, []);
 
   const handleClose = useCallback(() => {
-    setVisible(false);
-    setTimeout(onClose, 300);
+    setClosing(true);
+    setTimeout(onClose, 280);
   }, [onClose]);
 
   // Escape key
@@ -246,11 +241,11 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
   const yesNo: string[] = ['YES', 'NO'];
 
   return (
-    <div className={`${styles.overlay} ${visible ? styles.overlayVisible : ''} ${extreme ? styles.extreme : ''}`}
+    <div className={`${styles.overlay} ${closing ? styles.overlayClosing : ''} ${extreme ? styles.extreme : ''}`}
       onClick={e => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
-        className={`${styles.window} ${visible ? styles.windowVisible : ''}`}
+        className={styles.window}
         onClick={e => e.stopPropagation()}
       >
 
