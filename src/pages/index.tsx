@@ -2,6 +2,7 @@ import type {ReactNode} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 import Terminal from '@site/src/components/Terminal';
 import FloatingGhosts from '@site/src/components/FloatingGhosts';
 import NightSky from '@site/src/components/NightSky';
@@ -23,7 +24,9 @@ export default function Home(): ReactNode {
         </Link>
       </div>
       <main className={styles.main}>
-        <Terminal />
+        <BrowserOnly fallback={<div style={{height: '60vh'}} />}>
+          {() => <Terminal />}
+        </BrowserOnly>
       </main>
     </Layout>
   );
