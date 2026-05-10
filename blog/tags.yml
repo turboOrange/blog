@@ -2,3 +2,59 @@ docusaurus:
   label: Docusaurus
   permalink: /docusaurus
   description: Docusaurus tag description
+
+nix:
+  label: Nix
+  permalink: /nix
+
+qa:
+  label: QA
+  permalink: /qa
+
+ux:
+  label: UX
+  permalink: /ux
+
+cyber-security:
+  label: Cyber Security
+  permalink: /cyber-security
+
+spinachlang:
+  label: SpinachLang
+  permalink: /spinachlang
+
+quantum-computing:
+  label: Quantum Computing
+  permalink: /quantum-computing
+
+embedded:
+  label: Embedded
+  permalink: /embedded
+
+cpp:
+  label: C++
+  permalink: /cpp
+
+rust:
+  label: Rust
+  permalink: /rust
+
+arduino:
+  label: Arduino
+  permalink: /arduino
+
+pic:
+  label: PIC
+  permalink: /pic
+
+microcontroller:
+  label: Microcontroller
+  permalink: /microcontroller
+
+raspberry-pi:
+  label: Raspberry Pi
+  permalink: /raspberry-pi
+
+esp32:
+  label: ESP32
+  permalink: /esp32

@@ -2,12 +2,12 @@
 title: embedded development how does it work?
 date: 2026-05-06
 authors: cgauthier
-tags: [embedded, cpp, rust, arduino, pic, microcontroller, raspberry pi, esp32]
+tags: [embedded, cpp, rust, arduino, pic, microcontroller, raspberry-pi, esp32]
 description: Reporting issues can be tricky
 ---
 # Embedded development how does it work?
 ## Why I'm doing this
-I did both college in electronics computers and networks and a bachelor of computer science.
+I did both college in electronics computers and networks and a bachelor of computer science.<!-- truncate -->
 I do not have the experience of all universities but at UQAM at least, embedded development wasn't really touched at all.
 There wasn't even a specialisation course.
 I find it strange cause for the rest of the fields, they give at least a good overview.
@@ -175,19 +175,19 @@ Here are the bitwise operations you want to know:
 - OR: | example: 0b1101 | 0b1011 = 0b1111
 - XOR: ^ example: 0b1101 ^ 0b1011 = 0b0110
 - NOT: ~ example: ~0b1101 = 0b0010
-- Left shift: << example: 0b0001 << 2 = 0b0100
-- Right shift: >> example: 0b0100 >> 2 = 0b0001
+- Left shift: `<<` example: `0b0001 << 2 = 0b0100`
+- Right shift: `>>` example: `0b0100 >> 2 = 0b0001`
 
 And here are the most useful use of it for registers:
-- Set a bit: reg |= (1 << bit_position);
-- Clear a bit: reg &= ~(1 << bit_position);
-- Toggle a bit: reg ^= (1 << bit_position);
-- Check if a bit is set: if (reg & (1 << bit_position)) {}
-- Check if a bit is clear: if (!(reg & (1 << bit_position))) {}
-- Set multiple bits: reg |= (mask);
-- Clear multiple bits: reg &= ~mask;
-- Toggle multiple bits: reg ^= (mask);
-- Check if multiple bits are set: if ((reg & mask) == mask) {}
+- Set a bit: `reg |= (1 << bit_position);`
+- Clear a bit: `reg &= ~(1 << bit_position);`
+- Toggle a bit: `reg ^= (1 << bit_position);`
+- Check if a bit is set: `if (reg & (1 << bit_position)) {}`
+- Check if a bit is clear: `if (!(reg & (1 << bit_position))) {}`
+- Set multiple bits: `reg |= (mask);`
+- Clear multiple bits: `reg &= ~mask;`
+- Toggle multiple bits: `reg ^= (mask);`
+- Check if multiple bits are set: `if ((reg & mask) == mask) {}`
 
 ## cross compilation and toolchains
 You might be used to compile your C or C++ code using gcc or clang. It's similar in embedded development but you need compilers made for your chip architecture and, if it's a microcontroller, a tool to put it in there called a programmer.
