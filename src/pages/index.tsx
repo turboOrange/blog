@@ -28,6 +28,9 @@ export default function Home(): ReactNode {
           {() => <Terminal />}
         </BrowserOnly>
       </main>
+      <div className={styles.vibeBadge}>
+        this text was added by mistral using vibe on phone as a capability test.
+      </div>
     </Layout>
   );
 }
