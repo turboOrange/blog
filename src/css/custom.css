@@ -5,8 +5,28 @@
  */
 
 /* You can override the default Infima variables here. */
+
+/*
+ * Spooky accent system.
+ * `theme.ts` in the Terminal exposes named themes that set
+ * --spooky-accent / --spooky-accent-2 at runtime (persisted in
+ * localStorage, applied pre-paint by static/theme-init.js).
+ * Literal fallbacks come first, `color-mix()` overrides follow —
+ * accent-aware rules stay consistent across browsers either way.
+ */
+
+/* Reserve the scrollbar gutter so the layout doesn't reflow when a
+   scrollbar appears — kills a big source of "site behaves
+   differently in browser X". */
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
-  --ifm-color-primary: #ff79c6;
+  --spooky-accent: #ff79c6;
+  --spooky-accent-2: #bd93f9;
+
+  --ifm-color-primary: var(--spooky-accent);
   --ifm-color-primary-dark: #ff52b7;
   --ifm-color-primary-darker: #ff3eb0;
   --ifm-color-primary-darkest: #ff049a;
@@ -15,11 +35,22 @@
   --ifm-color-primary-lightest: #ffeefa;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(255, 121, 198, 0.1);
+
+  --ifm-color-primary-dark: color-mix(in srgb, var(--spooky-accent) 90%, #000);
+  --ifm-color-primary-darker: color-mix(in srgb, var(--spooky-accent) 80%, #000);
+  --ifm-color-primary-darkest: color-mix(in srgb, var(--spooky-accent) 65%, #000);
+  --ifm-color-primary-light: color-mix(in srgb, var(--spooky-accent) 90%, #fff);
+  --ifm-color-primary-lighter: color-mix(in srgb, var(--spooky-accent) 75%, #fff);
+  --ifm-color-primary-lightest: color-mix(in srgb, var(--spooky-accent) 50%, #fff);
+  --docusaurus-highlighted-code-line-bg: color-mix(in srgb, var(--spooky-accent) 12%, transparent);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #bd93f9;
+  --spooky-accent: #bd93f9;
+  --spooky-accent-2: #ff79c6;
+
+  --ifm-color-primary: var(--spooky-accent);
   --ifm-color-primary-dark: #aa7df7;
   --ifm-color-primary-darker: #a16ef6;
   --ifm-color-primary-darkest: #8441f3;
@@ -27,6 +58,15 @@
   --ifm-color-primary-lighter: #d9b4fc;
   --ifm-color-primary-lightest: #f4d6fe;
   --docusaurus-highlighted-code-line-bg: rgba(189, 147, 249, 0.2);
+
+  --ifm-color-primary-dark: color-mix(in srgb, var(--spooky-accent) 90%, #000);
+  --ifm-color-primary-darker: color-mix(in srgb, var(--spooky-accent) 80%, #000);
+  --ifm-color-primary-darkest: color-mix(in srgb, var(--spooky-accent) 65%, #000);
+  --ifm-color-primary-light: color-mix(in srgb, var(--spooky-accent) 90%, #fff);
+  --ifm-color-primary-lighter: color-mix(in srgb, var(--spooky-accent) 78%, #fff);
+  --ifm-color-primary-lightest: color-mix(in srgb, var(--spooky-accent) 55%, #fff);
+  --docusaurus-highlighted-code-line-bg: color-mix(in srgb, var(--spooky-accent) 22%, transparent);
+
   --ifm-background-color: #2d2b30;
   --ifm-background-surface-color: #38353c;
   --ifm-navbar-background-color: #1e1b20;

@@ -1,7 +1,7 @@
 docusaurus:
   label: Docusaurus
   permalink: /docusaurus
-  description: Docusaurus tag description
+  description: Posts about this blog and its spooky Docusaurus setup
 
 nix:
   label: Nix
@@ -58,3 +58,35 @@ raspberry-pi:
 esp32:
   label: ESP32
   permalink: /esp32
+
+google:
+  label: Google
+  permalink: /google
+
+ai:
+  label: AI
+  permalink: /ai
+
+flutter:
+  label: Flutter
+  permalink: /flutter
+
+flutter-flow:
+  label: Flutter Flow
+  permalink: /flutter-flow
+
+locker:
+  label: Locker
+  permalink: /locker
+
+firebase:
+  label: Firebase
+  permalink: /firebase
+
+android:
+  label: Android
+  permalink: /android
+
+android-xr:
+  label: Android XR
+  permalink: /android-xr

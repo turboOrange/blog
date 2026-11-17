@@ -10,8 +10,10 @@
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.25s ease;
+  /* no backdrop-filter — this overlay lives inside the terminal's
+     preserve-3d scene where backdrop reads can glitch the compositor;
+     the 60% black dim reads the same without it */
   background: rgba(10, 8, 14, 0.60);
-  backdrop-filter: blur(4px);
 }
 
 .overlayVisible {

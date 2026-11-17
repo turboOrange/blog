@@ -36,6 +36,7 @@ function collectPosts(blogDir) {
       const fmBlock = fmMatch?.[1] ?? '';
       const body = (fmMatch?.[2] ?? raw)
         .replace(/<!--\s*truncate\s*-->/g, '\n---\n')
+        .replace(/\{\/\*\s*truncate\s*\*\/\}/g, '\n---\n')
         .replace(/<[^>]+>/g, '')
         .trim();
 

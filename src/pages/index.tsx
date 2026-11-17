@@ -14,7 +14,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      description="A spooky terminal-shaped homepage. Don't be afraid of the terminal.">
       <NightSky />
       <FloatingGhosts />
       <div className={styles.scaredBanner}>

@@ -13,19 +13,32 @@ interface Star {
   size: number;
 }
 
+// Deterministic pseudo-random (mulberry32) — stars must be identical on
+// the server-rendered HTML and the client, or React hydration mismatch
+// warnings appear and every browser "renders the site differently".
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function generateStars(count: number): Star[] {
+  const rand = mulberry32(1337);
   return Array.from({ length: count }, (_, id) => ({
     id,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    char: STAR_CHARS[Math.floor(Math.random() * STAR_CHARS.length)],
-    duration: 2 + Math.random() * 4,   // 2–6 s
-    delay: -(Math.random() * 6),        // negative delay = start mid-cycle
-    size: Math.random() < 0.2 ? 1.3 : 1,
+    x: rand() * 100,
+    y: rand() * 100,
+    char: STAR_CHARS[Math.floor(rand() * STAR_CHARS.length)],
+    duration: 2 + rand() * 4,   // 2–6 s
+    delay: -(rand() * 6),        // negative delay = start mid-cycle
+    size: rand() < 0.2 ? 1.3 : 1,
   }));
 }
 
-const STAR_COUNT = typeof window !== 'undefined' && window.innerWidth <= 768 ? 21 : 42;
+const STAR_COUNT = 42;
 const STARS = generateStars(STAR_COUNT);
 
 export default function NightSky(): React.ReactNode {

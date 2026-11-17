@@ -33,6 +33,8 @@ interface TileProps {
 
 function Tile({ char, extreme, active, hovered, progress, onEnter, onLeave, wide }: TileProps) {
   const dashes = '─'.repeat(char.length <= 1 ? 3 : char.length + 2);
+  // Pointer events (rather than mouse-only) so the board works on touch:
+  // pointerenter accumulates like hover, pointerleave cancels.
   return (
     <div
       className={[
@@ -42,8 +44,15 @@ function Tile({ char, extreme, active, hovered, progress, onEnter, onLeave, wide
         hovered ? styles.tileHovered : '',
         extreme ? styles.tileExtreme : '',
       ].filter(Boolean).join(' ')}
-      onMouseEnter={active ? onEnter : undefined}
-      onMouseLeave={active ? onLeave : undefined}
+      onPointerEnter={active ? onEnter : undefined}
+      onPointerLeave={active ? onLeave : undefined}
+      onPointerDown={(e) => {
+        // On touch there's no hover — touching a tile should start the
+        // selection "hold". Ignore so native scrolling still works; the
+        // pointerenter above already fired.
+        if (!active) return;
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      }}
     >
       <pre className={styles.tileFrame}>
         {`┌${dashes}┐\n│ ${char.length === 1 ? ` ${char} ` : char} │\n└${dashes}┘`}
@@ -162,7 +171,7 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
     centerInsideRef.current = false;
   }, []);
 
-  const handleBoardMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleBoardPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const ph = phaseRef.current;
     if (ph === 'active') return;
 
@@ -182,7 +191,7 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
     }
   }, [startCountdown, cancelCountdown]);
 
-  const handleBoardMouseLeave = useCallback(() => {
+  const handleBoardPointerLeave = useCallback(() => {
     if (phaseRef.current === 'countdown') {
       centerInsideRef.current = false;
       cancelCountdown();
@@ -261,8 +270,8 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
         <div
           ref={boardRef}
           className={styles.board}
-          onMouseMove={handleBoardMouseMove}
-          onMouseLeave={handleBoardMouseLeave}
+          onPointerMove={handleBoardPointerMove}
+          onPointerLeave={handleBoardPointerLeave}
         >
           {/* Board banner */}
           <div className={styles.boardBanner}>{extreme ? BOARD_BANNER_EXTREME : BOARD_BANNER_NORMAL}</div>
@@ -321,7 +330,7 @@ export default function SpiritBoard({ extreme = false, onClose }: SpiritBoardPro
           {/* Center overlay: waiting prompt or countdown */}
           {phase === 'waiting' && (
             <div className={styles.centerOverlay} aria-hidden="true">
-              <div className={styles.centerPromptText}>{'> move to center <'}</div>
+              <div className={styles.centerPromptText}>{'> hover / hold the center <'}</div>
             </div>
           )}
           {phase === 'countdown' && (

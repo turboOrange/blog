@@ -30,13 +30,24 @@ const GHOST_NAMES = [
     "Omen",
 ];
 
-interface GhostPosition {
+interface Ghost {
+    id: number;
+    // Position + velocity in px relative to the viewport. Physics in real
+    // units behaves identically across browsers, unlike % + vh math that
+    // breaks whenever a scrollbar appears or a mobile URL bar collapses.
     x: number;
     y: number;
-    speedX: number;
-    speedY: number;
+    vx: number;
+    vy: number;
+    // idle drift angle, advances each tick
     angle: number;
+    // squish/stretch spring — the "bouncy raccoon" response
+    stretchX: number;
+    stretchY: number;
+    svx: number; // stretch spring velocity
+    svy: number;
     opacity: number;
+    targetOpacity: number;
     teleportTimer: number;
     teleportPhase:
         | "moving"
@@ -45,9 +56,18 @@ interface GhostPosition {
         | "teleporting"
         | "fading-in"
         | "dying";
-    isDragging?: boolean;
     spinX: number;
     spinY: number;
+    isDragging?: boolean;
+    // pointer target the drag spring chases (viewport coords)
+    ptX?: number;
+    ptY?: number;
+    // low-passed drag velocity in px/tick — becomes the release throw
+    dvx?: number;
+    dvy?: number;
+    // post-throw ballistic arc: temporary gravity until it settles
+    throwArc?: boolean;
+    arcTicks?: number;
     dyingProgress?: number;
     dyingTargetX?: number;
     dyingTargetY?: number;
@@ -90,39 +110,90 @@ export const GHOST_COLORS = [
     "#fb923c",
 ];
 
-const TICK_MS = 50;
+// Fixed simulation rate — physics speed is refresh-rate independent.
+const TICK_HZ = 60;
+const TICK_MS = 1000 / TICK_HZ;
+
+// physics constants (per tick at 60Hz)
+const DRIFT_ACCEL = 0.0035; // wander force while idling
+const DRIFT_DAMP = 0.985; // idle drag
+const BOUNCE_ENERGY = 0.72; // velocity kept after an idle wall hit
+const ARC_BOUNCE_ENERGY = 0.6; // livelier lossy bounce while thrown
+const BOUNCE_SQUISH = 0.35; // spring compression on wall hit
+const STRETCH_SPRING = 0.18; // squish spring stiffness
+const STRETCH_DAMP = 0.78; // squish spring damping
+const STRETCH_MIN = 0.35; // keep the spring within sane visual bounds
+const STRETCH_MAX = 2.4;
+const WALL_MARGIN = 10; // px from viewport edges where ghosts bounce
+const DRAG_CHASE = 0.55; // per-tick catch-up toward the pointer target
+const DRAG_SPEED_REF = 6; // px/tick that reads as "max squish" while dragging
+const THROW_GRAVITY = 0.14; // px/tick² while the throw arc lasts
+const ARC_END_V = 0.9; // rebound below this = the arc is over
+const ARC_MAX_TICKS = 300; // hard cap on the arc
+const THROW_MAX_V = 28; // px/tick cap on throw speed
+const THROW_SCALE = 0.85;
+
+// Fallback ghost footprint until the element is measured (px)
+const DEFAULT_GHOST_W = 110;
+const DEFAULT_GHOST_H = 90;
+
+const clamp = (v: number, lo: number, hi: number) =>
+    Math.max(lo, Math.min(hi, v));
+
 let particleIdCounter = 0;
+let ghostIdCounter = 0;
 
 export default function FloatingGhosts(): React.ReactNode {
-    const [ghosts, setGhosts] = useState<GhostPosition[]>([]);
-
-    // lootbox reveal queue: each entry is {ghost, name}
-    interface RevealEntry {
-        ghost: GhostPosition;
-        name: string;
-    }
-    const [revealQueue, setRevealQueue] = useState<RevealEntry[]>([]);
-
-    const [particles, setParticles] = useState<Particle[]>([]);
+    // Ghosts and particles are mutated in place by the rAF loop; React
+    // re-renders via a tick counter so we don't copy arrays 60x a second.
+    const ghostsRef = useRef<Ghost[]>([]);
+    const particlesRef = useRef<Particle[]>([]);
+    const sizesRef = useRef<Map<number, { w: number; h: number }>>(new Map());
+    const [, setRenderTick] = useState(0);
+    const [revealQueue, setRevealQueue] = useState<
+        Array<{ ghost: Ghost; name: string }>
+    >([]);
     const [trashHover, setTrashHover] = useState(false);
     const [trashShake, setTrashShake] = useState(false);
     const [anyDragging, setAnyDragging] = useState(false);
 
-    const draggedGhostRef = useRef<number | null>(null);
+    const draggedGhostRef = useRef<number | null>(null); // ghost id
     const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-    const lastPosPosRef = useRef<{ x: number; y: number; time: number }>({
-        x: 0,
-        y: 0,
-        time: Date.now(),
-    });
-    const rafRef = useRef<number | null>(null);
-    const lastTickRef = useRef<number>(Date.now());
     const trashRef = useRef<HTMLPreElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const lastTimeRef = useRef<number>(0);
+    const accumulatorRef = useRef<number>(0);
+
+    const render = useCallback(() => setRenderTick((t) => t + 1), []);
+
+    const ghostSize = useCallback((id: number) => sizesRef.current.get(id), []);
+
+    // Measure each ghost's rendered footprint once (offsetWidth/Height
+    // ignore transforms, so squish never corrupts the numbers). A resize
+    // clears the cache so the next render re-measures under the new
+    // media query.
+    const measureGhost = useCallback(
+        (id: number, el: HTMLPreElement | null) => {
+            if (el && !sizesRef.current.has(id)) {
+                const w = el.offsetWidth;
+                const h = el.offsetHeight;
+                if (w > 0 && h > 0) sizesRef.current.set(id, { w, h });
+            }
+        },
+        [],
+    );
+
+    useEffect(() => {
+        const onResize = () => sizesRef.current.clear();
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
 
     const isOverTrash = useCallback((clientX: number, clientY: number) => {
         if (!trashRef.current) return false;
         const rect = trashRef.current.getBoundingClientRect();
-        const pad = 40; // bigger hit area for fat fingers
+        const pad = 48; // bigger hit area for fat fingers
         return (
             clientX >= rect.left - pad &&
             clientX <= rect.right + pad &&
@@ -131,188 +202,290 @@ export default function FloatingGhosts(): React.ReactNode {
         );
     }, []);
 
-    const spawnParticles = useCallback((trashX: number, trashY: number) => {
-        const burst: Particle[] = Array.from({ length: 22 }, () => {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 0.4 + Math.random() * 1.2;
-            return {
-                id: particleIdCounter++,
-                x: trashX,
-                y: trashY,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 0.5,
-                char: PARTICLE_CHARS[
-                    Math.floor(Math.random() * PARTICLE_CHARS.length)
-                ],
-                opacity: 1,
-                color: PARTICLE_COLORS[
-                    Math.floor(Math.random() * PARTICLE_COLORS.length)
-                ],
-            };
-        });
-        setParticles((prev) => [...prev, ...burst]);
-    }, []);
+    const spawnParticles = useCallback(
+        (clientX: number, clientY: number) => {
+            const burst: Particle[] = Array.from({ length: 22 }, () => {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.6 + Math.random() * 1.8;
+                return {
+                    id: particleIdCounter++,
+                    x: clientX,
+                    y: clientY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 0.75,
+                    char: PARTICLE_CHARS[
+                        Math.floor(Math.random() * PARTICLE_CHARS.length)
+                    ],
+                    opacity: 1,
+                    color: PARTICLE_COLORS[
+                        Math.floor(Math.random() * PARTICLE_COLORS.length)
+                    ],
+                };
+            });
+            particlesRef.current.push(...burst);
+        },
+        [],
+    );
 
-    const tick = useCallback(() => {
-        const now = Date.now();
-        if (now - lastTickRef.current >= TICK_MS) {
-            lastTickRef.current = now;
+    // ── Simulation ───────────────────────────────────────────────────────────
 
-            setParticles((prev) =>
-                prev
-                    .map((p) => ({
-                        ...p,
-                        x: p.x + p.vx,
-                        y: p.y + p.vy,
-                        vy: p.vy + 0.06,
-                        opacity: p.opacity - 0.035,
-                    }))
-                    .filter((p) => p.opacity > 0),
-            );
+    const tickPhysics = useCallback(() => {
+        const ghosts = ghostsRef.current;
+        const W = window.innerWidth;
+        const H = window.innerHeight;
 
-            setGhosts((prevGhosts) =>
-                prevGhosts
-                    .filter(
-                        (g) =>
-                            !(
-                                g.teleportPhase === "dying" &&
-                                (g.dyingProgress ?? 0) >= 1
-                            ),
-                    )
-                    .map((ghost) => {
-                        if (ghost.isDragging) return ghost;
+        for (const g of ghosts) {
+            if (g.teleportPhase === "dying") {
+                const prog = Math.min(1, (g.dyingProgress ?? 0) + 0.045);
+                const tx = g.dyingTargetX ?? g.x;
+                const ty = g.dyingTargetY ?? g.y;
+                g.x += (tx - g.x) * 0.14;
+                g.y += (ty - g.y) * 0.14;
+                g.opacity = 1 - prog;
+                g.spinX += 2.2;
+                g.spinY += 3.4;
+                g.dyingProgress = prog;
+                continue;
+            }
 
-                        let {
-                            x,
-                            y,
-                            speedX,
-                            speedY,
-                            angle,
-                            opacity,
-                            teleportTimer,
-                            teleportPhase,
-                            spinX,
-                            spinY,
-                            dyingProgress,
-                            dyingTargetX,
-                            dyingTargetY,
-                            color,
-                            artStyle,
-                        } = ghost;
+            if (g.isDragging) {
+                // chase the pointer target with a small spring — enough lag
+                // to feel jelly, tight enough to never feel sloppy
+                const px = g.ptX ?? g.x;
+                const py = g.ptY ?? g.y;
+                const dx = (px - g.x) * DRAG_CHASE;
+                const dy = (py - g.y) * DRAG_CHASE;
+                g.vx = dx;
+                g.vy = dy;
+                g.x += dx;
+                g.y += dy;
 
-                        if (teleportPhase === "dying") {
-                            const prog = Math.min(
-                                1,
-                                (dyingProgress ?? 0) + 0.06,
-                            );
-                            const tx = dyingTargetX ?? x;
-                            const ty = dyingTargetY ?? y;
-                            return {
-                                ...ghost,
-                                x: x + (tx - x) * 0.18,
-                                y: y + (ty - y) * 0.18,
-                                opacity: 1 - prog,
-                                spinX: ghost.spinX + 25,
-                                spinY: ghost.spinY + 40,
-                                dyingProgress: prog,
-                            };
+                // smoothed release velocity: if the pointer stops and waits,
+                // this decays to ~0 within a few ticks — no phantom throws
+                g.dvx = (g.dvx ?? 0) * 0.65 + dx * 0.35;
+                g.dvy = (g.dvy ?? 0) * 0.65 + dy * 0.35;
+
+                // squish along the dominant motion axis, around a
+                // slightly-inflated "held" baseline
+                const speed = Math.min(1, Math.hypot(dx, dy) / DRAG_SPEED_REF);
+                const long = 1.05 + speed * 0.38;
+                const short = 1.03 - speed * 0.22;
+                const alongX = Math.abs(dx) >= Math.abs(dy);
+                const wantX = alongX ? long : short;
+                const wantY = alongX ? short : long;
+                g.stretchX += (wantX - g.stretchX) * 0.35;
+                g.stretchY += (wantY - g.stretchY) * 0.35;
+                continue;
+            }
+
+            // squish spring always relaxes back toward 1
+            g.svx += (1 - g.stretchX) * STRETCH_SPRING;
+            g.svy += (1 - g.stretchY) * STRETCH_SPRING;
+            g.svx *= STRETCH_DAMP;
+            g.svy *= STRETCH_DAMP;
+            g.stretchX = clamp(g.stretchX + g.svx, STRETCH_MIN, STRETCH_MAX);
+            g.stretchY = clamp(g.stretchY + g.svy, STRETCH_MIN, STRETCH_MAX);
+
+            g.angle += 0.015;
+            g.spinX *= 0.90;
+            g.spinY *= 0.90;
+
+            switch (g.teleportPhase) {
+                case "moving": {
+                    const size = ghostSize(g.id) ?? {
+                        w: DEFAULT_GHOST_W,
+                        h: DEFAULT_GHOST_H,
+                    };
+                    // bounce bounds account for the ghost's own size, so it
+                    // stays fully on screen instead of hanging off the edge
+                    const xMin = WALL_MARGIN;
+                    const xMax = Math.max(xMin + 1, W - size.w - WALL_MARGIN);
+                    const yMin = WALL_MARGIN;
+                    const yMax = Math.max(yMin + 1, H - size.h - WALL_MARGIN);
+
+                    if (g.throwArc) {
+                        // ballistic descent: gravity + light air drag
+                        g.vy += THROW_GRAVITY;
+                        g.vx *= 0.99;
+                        g.vy *= 0.998;
+                    } else {
+                        g.vx += Math.sin(g.angle) * DRIFT_ACCEL;
+                        g.vy += Math.cos(g.angle) * DRIFT_ACCEL;
+                        g.vx *= DRIFT_DAMP;
+                        g.vy *= DRIFT_DAMP;
+                    }
+                    g.x += g.vx;
+                    g.y += g.vy;
+
+                    const bounce = g.throwArc
+                        ? ARC_BOUNCE_ENERGY
+                        : BOUNCE_ENERGY;
+
+                    if (g.x <= xMin) {
+                        g.x = xMin;
+                        g.vx = Math.abs(g.vx) * bounce;
+                        g.svx -= BOUNCE_SQUISH;
+                        g.svy += BOUNCE_SQUISH * 0.6;
+                        g.angle += Math.PI / 4;
+                    } else if (g.x >= xMax) {
+                        g.x = xMax;
+                        g.vx = -Math.abs(g.vx) * bounce;
+                        g.svx -= BOUNCE_SQUISH;
+                        g.svy += BOUNCE_SQUISH * 0.6;
+                        g.angle += Math.PI / 4;
+                    }
+                    if (g.y <= yMin) {
+                        g.y = yMin;
+                        g.vy = Math.abs(g.vy) * bounce;
+                        g.svy -= BOUNCE_SQUISH;
+                        g.svx += BOUNCE_SQUISH * 0.6;
+                        g.angle += Math.PI / 4;
+                    } else if (g.y >= yMax) {
+                        g.y = yMax;
+                        g.vy = -Math.abs(g.vy) * bounce;
+                        g.svy -= BOUNCE_SQUISH;
+                        g.svx += BOUNCE_SQUISH * 0.6;
+                        g.angle += Math.PI / 4;
+                        // soft floor landing ends the arc
+                        if (g.throwArc && Math.abs(g.vy) < ARC_END_V) {
+                            g.throwArc = false;
+                            g.vy = 0;
+                            g.vx *= 0.5;
                         }
+                    }
 
-                        angle += 0.015;
-                        teleportTimer -= 1;
-                        spinX *= 0.92;
-                        spinY *= 0.92;
-
-                        if (teleportPhase === "moving") {
-                            speedX += Math.sin(angle) * 0.003;
-                            speedY += Math.cos(angle) * 0.003;
-                            speedX *= 0.99;
-                            speedY *= 0.99;
-                            x += speedX;
-                            y += speedY;
-
-                            if (x <= 0 || x >= 95) {
-                                speedX = -speedX * 0.8;
-                                x = x <= 0 ? 0 : 95;
-                                angle += Math.PI / 4;
-                            }
-                            if (y <= 0 || y >= 95) {
-                                speedY = -speedY * 0.8;
-                                y = y <= 0 ? 0 : 95;
-                                angle += Math.PI / 4;
-                            }
-
-                            if (teleportTimer <= 0) {
-                                teleportPhase = "stopping";
-                                teleportTimer = 30;
-                            }
-                        } else if (teleportPhase === "stopping") {
-                            speedX *= 0.85;
-                            speedY *= 0.85;
-                            x += speedX;
-                            y += speedY;
-                            if (teleportTimer <= 0) {
-                                teleportPhase = "fading-out";
-                                teleportTimer = 20;
-                                speedX = 0;
-                                speedY = 0;
-                            }
-                        } else if (teleportPhase === "fading-out") {
-                            opacity = 0;
-                            if (teleportTimer <= 0) {
-                                teleportPhase = "teleporting";
-                                teleportTimer = 5;
-                            }
-                        } else if (teleportPhase === "teleporting") {
-                            if (teleportTimer <= 0) {
-                                x = Math.random() * 90;
-                                y = Math.random() * 90;
-                                speedX = (Math.random() - 0.5) * 0.15;
-                                speedY = (Math.random() - 0.5) * 0.15;
-                                angle = Math.random() * Math.PI * 2;
-                                teleportPhase = "fading-in";
-                                teleportTimer = 20;
-                            }
-                        } else if (teleportPhase === "fading-in") {
-                            opacity = 1;
-                            if (teleportTimer <= 0) {
-                                teleportPhase = "moving";
-                                teleportTimer = Math.random() * 600 + 300;
-                            }
+                    if (g.throwArc) {
+                        g.arcTicks = (g.arcTicks ?? 0) + 1;
+                        if (g.arcTicks >= ARC_MAX_TICKS) {
+                            g.throwArc = false;
                         }
-
-                        return {
-                            x,
-                            y,
-                            speedX,
-                            speedY,
-                            angle,
-                            opacity,
-                            teleportTimer,
-                            teleportPhase,
-                            spinX,
-                            spinY,
-                            dyingProgress,
-                            dyingTargetX,
-                            dyingTargetY,
-                            color,
-                            artStyle,
+                    } else {
+                        g.arcTicks = 0;
+                        g.teleportTimer -= 1;
+                        if (g.teleportTimer <= 0) {
+                            g.teleportPhase = "stopping";
+                            g.teleportTimer = 30;
+                        }
+                    }
+                    break;
+                }
+                case "stopping": {
+                    g.vx *= 0.85;
+                    g.vy *= 0.85;
+                    g.x += g.vx;
+                    g.y += g.vy;
+                    g.teleportTimer -= 1;
+                    if (g.teleportTimer <= 0) {
+                        g.teleportPhase = "fading-out";
+                        g.teleportTimer = 20;
+                        g.vx = 0;
+                        g.vy = 0;
+                        g.dvx = 0;
+                        g.dvy = 0;
+                        g.targetOpacity = 0;
+                    }
+                    break;
+                }
+                case "fading-out": {
+                    g.teleportTimer -= 1;
+                    if (g.teleportTimer <= 0) {
+                        g.teleportPhase = "teleporting";
+                        g.teleportTimer = 5;
+                    }
+                    break;
+                }
+                case "teleporting": {
+                    g.teleportTimer -= 1;
+                    if (g.teleportTimer <= 0) {
+                        const size = ghostSize(g.id) ?? {
+                            w: DEFAULT_GHOST_W,
+                            h: DEFAULT_GHOST_H,
                         };
-                    }),
+                        g.x = WALL_MARGIN +
+                            Math.random() *
+                                Math.max(W - size.w - 2 * WALL_MARGIN, 40);
+                        g.y = WALL_MARGIN +
+                            Math.random() *
+                                Math.max(H - size.h - 2 * WALL_MARGIN, 40);
+                        g.vx = (Math.random() - 0.5) * 0.5;
+                        g.vy = (Math.random() - 0.5) * 0.5;
+                        g.angle = Math.random() * Math.PI * 2;
+                        g.throwArc = false;
+                        g.svx = 0.4;
+                        g.svy = 0.4;
+                        g.teleportPhase = "fading-in";
+                        g.teleportTimer = 20;
+                        g.targetOpacity = 1;
+                    }
+                    break;
+                }
+                case "fading-in": {
+                    g.teleportTimer -= 1;
+                    if (g.teleportTimer <= 0) {
+                        g.teleportPhase = "moving";
+                        g.teleportTimer = Math.random() * 400 + 200;
+                    }
+                    break;
+                }
+            }
+
+            // opacity eases toward target
+            g.opacity += (g.targetOpacity - g.opacity) * 0.15;
+        }
+
+        // drop fully-dead ghosts
+        const dead = ghosts.filter(
+            (g) => g.teleportPhase === "dying" && (g.dyingProgress ?? 0) >= 1,
+        );
+        if (dead.length > 0) {
+            for (const g of dead) sizesRef.current.delete(g.id);
+            ghostsRef.current = ghosts.filter(
+                (g) =>
+                    !(
+                        g.teleportPhase === "dying" &&
+                        (g.dyingProgress ?? 0) >= 1
+                    ),
             );
         }
 
-        rafRef.current = requestAnimationFrame(tick);
-    }, []);
+        // particles
+        const ps = particlesRef.current;
+        for (const p of ps) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.09;
+            p.opacity -= 0.028;
+        }
+        if (ps.some((p) => p.opacity <= 0)) {
+            particlesRef.current = ps.filter((p) => p.opacity > 0);
+        }
+    }, [ghostSize]);
 
     useEffect(() => {
-        rafRef.current = requestAnimationFrame(tick);
+        const loop = (now: number) => {
+            if (!lastTimeRef.current) lastTimeRef.current = now;
+            let dt = now - lastTimeRef.current;
+            lastTimeRef.current = now;
+            // after a background tab pause, skip the catch-up burst
+            if (dt > 250) dt = TICK_MS;
+            accumulatorRef.current += dt;
+            let simulated = false;
+            while (accumulatorRef.current >= TICK_MS) {
+                accumulatorRef.current -= TICK_MS;
+                tickPhysics();
+                simulated = true;
+            }
+            if (simulated) render();
+            rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            lastTimeRef.current = 0;
         };
-    }, [tick]);
+    }, [tickPhysics, render]);
 
-    // ── Custom event listeners for terminal commands ──────────────────────────
+    // ── Terminal command hooks ───────────────────────────────────────────────
 
     useEffect(() => {
         const handleSummon = () => {
@@ -323,13 +496,21 @@ export default function FloatingGhosts(): React.ReactNode {
             const artStyle = Math.floor(
                 Math.random() * GHOST_ART_STYLES.length,
             );
-            const newGhost: GhostPosition = {
-                x: Math.random() * 85 + 5,
-                y: Math.random() * 80 + 5,
-                speedX: (Math.random() - 0.5) * 0.14,
-                speedY: (Math.random() - 0.5) * 0.14,
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const newGhost: Ghost = {
+                id: ghostIdCounter++,
+                x: W * (0.1 + Math.random() * 0.5),
+                y: H * (0.1 + Math.random() * 0.5),
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
                 angle: Math.random() * Math.PI * 2,
+                stretchX: 1,
+                stretchY: 1,
+                svx: 0,
+                svy: 0,
                 opacity: 1,
+                targetOpacity: 1,
                 teleportTimer: 6,
                 teleportPhase: "fading-in",
                 spinX: 0,
@@ -341,19 +522,21 @@ export default function FloatingGhosts(): React.ReactNode {
         };
 
         const handleKillAll = () => {
-            setGhosts((prev) =>
-                prev.map((g) =>
-                    g.teleportPhase === "dying"
-                        ? g
-                        : {
-                              ...g,
-                              teleportPhase: "dying",
-                              dyingProgress: 0,
-                              dyingTargetX: Math.random() * 90,
-                              dyingTargetY: Math.random() * 90,
-                          },
-                ),
-            );
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            for (const g of ghostsRef.current) {
+                if (g.teleportPhase === "dying") continue;
+                g.teleportPhase = "dying";
+                g.dyingProgress = 0;
+                g.isDragging = false;
+                g.dyingTargetX =
+                    WALL_MARGIN + Math.random() * (W * 0.8 - 2 * WALL_MARGIN);
+                g.dyingTargetY =
+                    WALL_MARGIN + Math.random() * (H * 0.8 - 2 * WALL_MARGIN);
+            }
+            draggedGhostRef.current = null;
+            setAnyDragging(false);
+            render();
         };
 
         window.addEventListener("summon-ghost", handleSummon);
@@ -362,83 +545,70 @@ export default function FloatingGhosts(): React.ReactNode {
             window.removeEventListener("summon-ghost", handleSummon);
             window.removeEventListener("kill-ghosts", handleKillAll);
         };
-    }, []);
+    }, [render]);
 
-    // ── Shared pointer logic ──────────────────────────────────────────────────
+    // ── Shared pointer logic (mouse + touch via pointer events) ──────────────
 
     const startDrag = useCallback(
-        (idx: number, clientX: number, clientY: number, el: HTMLElement) => {
-            draggedGhostRef.current = idx;
-            const rect = el.getBoundingClientRect();
-            dragOffsetRef.current = {
-                x: clientX - rect.left,
-                y: clientY - rect.top,
-            };
-            lastPosPosRef.current = {
-                x: clientX,
-                y: clientY,
-                time: Date.now(),
-            };
-            setGhosts((prev) =>
-                prev.map((g, i) =>
-                    i === idx
-                        ? {
-                              ...g,
-                              isDragging: true,
-                              opacity: 1,
-                              teleportTimer: 300,
-                              teleportPhase: "moving",
-                          }
-                        : g,
-                ),
-            );
+        (id: number, clientX: number, clientY: number) => {
+            const g = ghostsRef.current.find((g) => g.id === id);
+            // can't grab a ghost that's phasing out or dying
+            if (
+                !g ||
+                g.teleportPhase === "dying" ||
+                g.teleportPhase === "fading-out" ||
+                g.teleportPhase === "teleporting"
+            ) {
+                return;
+            }
+            draggedGhostRef.current = id;
+            // anchor in layout coordinates — immune to the squish transform,
+            // so the grab point never drifts (a transformed getBoundingClientRect
+            // was off by whatever the current scale was)
+            dragOffsetRef.current = { x: clientX - g.x, y: clientY - g.y };
+            g.isDragging = true;
+            g.throwArc = false;
+            g.ptX = g.x;
+            g.ptY = g.y;
+            g.dvx = 0;
+            g.dvy = 0;
+            g.vx = 0;
+            g.vy = 0;
+            g.opacity = 1;
+            g.targetOpacity = 1;
             setAnyDragging(true);
+            render();
         },
-        [],
+        [render],
     );
 
     const moveDrag = useCallback(
         (clientX: number, clientY: number) => {
-            if (draggedGhostRef.current === null) return;
-            const idx = draggedGhostRef.current;
-            const dx = clientX - lastPosPosRef.current.x;
-            const dy = clientY - lastPosPosRef.current.y;
-            lastPosPosRef.current = {
-                x: clientX,
-                y: clientY,
-                time: Date.now(),
-            };
+            const id = draggedGhostRef.current;
+            if (id === null) return;
+            const g = ghostsRef.current.find((g) => g.id === id);
+            if (!g || !g.isDragging) return;
 
             setTrashHover(isOverTrash(clientX, clientY));
 
-            setGhosts((prev) =>
-                prev.map((g, i) =>
-                    i === idx
-                        ? {
-                              ...g,
-                              x: Math.max(
-                                  0,
-                                  Math.min(
-                                      95,
-                                      ((clientX - dragOffsetRef.current.x) /
-                                          window.innerWidth) *
-                                          100,
-                                  ),
-                              ),
-                              y: Math.max(
-                                  0,
-                                  Math.min(
-                                      95,
-                                      ((clientY - dragOffsetRef.current.y) /
-                                          window.innerHeight) *
-                                          100,
-                                  ),
-                              ),
-                              spinX: Math.max(-60, Math.min(60, dy * 3)),
-                              spinY: Math.max(-60, Math.min(60, dx * 3)),
-                          }
-                        : g,
-                ),
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const size = sizesRef.current.get(id) ?? {
+                w: DEFAULT_GHOST_W,
+                h: DEFAULT_GHOST_H,
+            };
+            const pad = 2;
+            // clamp the spring target, not the ghost — it can visually
+            // overshoot slightly on fast flicks, which reads as jelly
+            g.ptX = clamp(
+                clientX - dragOffsetRef.current.x,
+                pad,
+                Math.max(pad, W - size.w - pad),
+            );
+            g.ptY = clamp(
+                clientY - dragOffsetRef.current.y,
+                pad,
+                Math.max(pad, H - size.h - pad),
             );
         },
         [isOverTrash],
@@ -446,157 +616,106 @@ export default function FloatingGhosts(): React.ReactNode {
 
     const endDrag = useCallback(
         (clientX: number, clientY: number) => {
-            if (draggedGhostRef.current === null) return;
-            const idx = draggedGhostRef.current;
+            const id = draggedGhostRef.current;
+            if (id === null) return;
+            const g = ghostsRef.current.find((g) => g.id === id);
             draggedGhostRef.current = null;
             setTrashHover(false);
             setAnyDragging(false);
+            if (!g) return;
 
             if (isOverTrash(clientX, clientY) && trashRef.current) {
                 const rect = trashRef.current.getBoundingClientRect();
-                const tx =
-                    ((rect.left + rect.width / 2) / window.innerWidth) * 100;
-                const ty =
-                    ((rect.top + rect.height / 2) / window.innerHeight) * 100;
-
-                setGhosts((prev) =>
-                    prev.map((g, i) =>
-                        i === idx
-                            ? {
-                                  ...g,
-                                  isDragging: false,
-                                  teleportPhase: "dying",
-                                  dyingProgress: 0,
-                                  dyingTargetX: tx,
-                                  dyingTargetY: ty,
-                              }
-                            : g,
-                    ),
-                );
+                const size = sizesRef.current.get(id) ?? {
+                    w: DEFAULT_GHOST_W,
+                    h: DEFAULT_GHOST_H,
+                };
+                g.isDragging = false;
+                g.teleportPhase = "dying";
+                g.dyingProgress = 0;
+                // aim the ghost's center (transform-origin) at the trash center
+                g.dyingTargetX =
+                    rect.left + rect.width / 2 - size.w / 2;
+                g.dyingTargetY =
+                    rect.top + rect.height / 2 - size.h / 2;
 
                 setTimeout(() => {
                     setTrashShake(true);
                     spawnParticles(
-                        ((rect.left + rect.width / 2) / window.innerWidth) *
-                            100,
-                        ((rect.top + rect.height / 2) / window.innerHeight) *
-                            100,
+                        rect.left + rect.width / 2,
+                        rect.top + rect.height / 2,
                     );
                     setTimeout(() => setTrashShake(false), 600);
                 }, 400);
             } else {
-                setGhosts((prev) =>
-                    prev.map((g, i) =>
-                        i === idx
-                            ? {
-                                  ...g,
-                                  isDragging: false,
-                                  speedX: (Math.random() - 0.5) * 0.15,
-                                  speedY: (Math.random() - 0.5) * 0.15,
-                                  teleportPhase: "moving",
-                                  teleportTimer: Math.random() * 600 + 300,
-                              }
-                            : g,
-                    ),
+                // throw! hand over the smoothed drag velocity
+                const speed = Math.hypot(g.dvx ?? 0, g.dvy ?? 0);
+                g.isDragging = false;
+                g.vx = clamp(
+                    (g.dvx ?? 0) * THROW_SCALE,
+                    -THROW_MAX_V,
+                    THROW_MAX_V,
                 );
+                g.vy = clamp(
+                    (g.dvy ?? 0) * THROW_SCALE,
+                    -THROW_MAX_V,
+                    THROW_MAX_V,
+                );
+                g.dvx = 0;
+                g.dvy = 0;
+                // springy pop back from the drag stretch
+                g.svx = 0.4;
+                g.svy = 0.4;
+                // a real fling gets a gravity arc with bounce landings;
+                // a gentle release just drifts from where it is
+                g.throwArc = speed > 2.5;
+                g.arcTicks = 0;
+                g.teleportPhase = "moving";
+                // let the fun play out before the ghost thinks about phasing
+                g.teleportTimer = Math.random() * 600 + 400;
             }
+            render();
         },
-        [isOverTrash, spawnParticles],
+        [isOverTrash, spawnParticles, render],
     );
 
-    // ── Mouse handlers ────────────────────────────────────────────────────────
-
-    const handleMouseDown = (idx: number, e: React.MouseEvent) => {
-        e.preventDefault();
-        startDrag(idx, e.clientX, e.clientY, e.currentTarget as HTMLElement);
-    };
-
-    const handleGhostMouseEnter = (_idx: number, e: React.MouseEvent) => {
-        lastPosPosRef.current = {
-            x: e.clientX,
-            y: e.clientY,
-            time: Date.now(),
-        };
-    };
-
-    const handleGhostMouseMove = (idx: number, e: React.MouseEvent) => {
-        if (draggedGhostRef.current !== null) return;
-        const now = Date.now();
-        const timeDiff = Math.max(now - lastPosPosRef.current.time, 1);
-        const dx = e.clientX - lastPosPosRef.current.x;
-        const dy = e.clientY - lastPosPosRef.current.y;
-        const speed = Math.sqrt(dx * dx + dy * dy) / timeDiff;
-        lastPosPosRef.current = { x: e.clientX, y: e.clientY, time: now };
-        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-            setGhosts((prev) =>
-                prev.map((g, i) =>
-                    i === idx
-                        ? {
-                              ...g,
-                              spinX: Math.max(
-                                  -90,
-                                  Math.min(90, -dy * speed * 5),
-                              ),
-                              spinY: Math.max(
-                                  -90,
-                                  Math.min(90, dx * speed * 5),
-                              ),
-                          }
-                        : g,
-                ),
-            );
-        }
-    };
-
-    // ── Touch handlers ────────────────────────────────────────────────────────
-
-    const handleTouchStart = (idx: number, e: React.TouchEvent) => {
-        e.preventDefault(); // stops scroll from stealing the gesture
-        const touch = e.changedTouches[0];
-        startDrag(
-            idx,
-            touch.clientX,
-            touch.clientY,
-            e.currentTarget as HTMLElement,
-        );
-    };
-
-    // ── Global mouse + touch listeners ───────────────────────────────────────
-
+    // Global listeners — pointer events cover mouse, touch and pen in one API.
     useEffect(() => {
-        const onMouseMove = (e: MouseEvent) => moveDrag(e.clientX, e.clientY);
-        const onMouseUp = (e: MouseEvent) => endDrag(e.clientX, e.clientY);
-
-        const onTouchMove = (e: TouchEvent) => {
+        const onPointerMove = (e: PointerEvent) => {
             if (draggedGhostRef.current === null) return;
-            e.preventDefault(); // prevent scroll while dragging
-            const touch = e.changedTouches[0];
-            moveDrag(touch.clientX, touch.clientY);
+            moveDrag(e.clientX, e.clientY);
+        };
+        const onPointerEnd = (e: PointerEvent) => {
+            if (draggedGhostRef.current === null) return;
+            endDrag(e.clientX, e.clientY);
         };
 
-        const onTouchEnd = (e: TouchEvent) => {
-            if (draggedGhostRef.current === null) return;
-            const touch = e.changedTouches[0];
-            endDrag(touch.clientX, touch.clientY);
-        };
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-        document.addEventListener("touchmove", onTouchMove, { passive: false });
-        document.addEventListener("touchend", onTouchEnd);
-        document.addEventListener("touchcancel", onTouchEnd);
+        document.addEventListener("pointermove", onPointerMove, {
+            passive: true,
+        });
+        document.addEventListener("pointerup", onPointerEnd);
+        document.addEventListener("pointercancel", onPointerEnd);
 
         return () => {
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-            document.removeEventListener("touchmove", onTouchMove);
-            document.removeEventListener("touchend", onTouchEnd);
-            document.removeEventListener("touchcancel", onTouchEnd);
+            document.removeEventListener("pointermove", onPointerMove);
+            document.removeEventListener("pointerup", onPointerEnd);
+            document.removeEventListener("pointercancel", onPointerEnd);
         };
     }, [moveDrag, endDrag]);
 
+    // Graceful keep-going if a browser drops pointer capture mid-drag.
+    const handleGhostLostCapture = (id: number, e: React.PointerEvent) => {
+        if (draggedGhostRef.current === id) {
+            endDrag(e.clientX, e.clientY);
+        }
+    };
+
     return (
-        <div className={styles.ghostContainer}>
+        <div
+            className={styles.ghostContainer}
+            ref={containerRef}
+            aria-hidden={undefined}
+        >
             {/* Lootbox reveal — one at a time, queue drains naturally */}
             {revealQueue.length > 0 && (
                 <GhostReveal
@@ -611,7 +730,11 @@ export default function FloatingGhosts(): React.ReactNode {
                     onDone={() => {
                         const entry = revealQueue[0];
                         setRevealQueue((prev) => prev.slice(1));
-                        setGhosts((prev) => [...prev, entry.ghost]);
+                        ghostsRef.current = [
+                            ...ghostsRef.current,
+                            entry.ghost,
+                        ];
+                        render();
                     }}
                 />
             )}
@@ -624,13 +747,13 @@ export default function FloatingGhosts(): React.ReactNode {
             </pre>
 
             {/* Particles */}
-            {particles.map((p) => (
+            {particlesRef.current.map((p) => (
                 <span
                     key={p.id}
                     className={styles.particle}
                     style={{
-                        left: `${p.x}vw`,
-                        top: `${p.y}vh`,
+                        left: `${p.x}px`,
+                        top: `${p.y}px`,
                         opacity: p.opacity,
                         color: p.color,
                     }}
@@ -640,23 +763,30 @@ export default function FloatingGhosts(): React.ReactNode {
             ))}
 
             {/* Ghosts */}
-            {ghosts.map((ghost, idx) => (
+            {ghostsRef.current.map((ghost) => (
                 <pre
-                    key={idx}
+                    key={ghost.id}
+                    ref={(el) => measureGhost(ghost.id, el)}
                     className={`${styles.ghost} ${ghost.isDragging ? styles.dragging : ""} ${ghost.teleportPhase === "fading-out" || ghost.teleportPhase === "teleporting" ? styles.fadingOut : ""} ${ghost.teleportPhase === "fading-in" ? styles.fadingIn : ""} ${ghost.teleportPhase === "dying" ? styles.dying : ""}`}
                     style={{
-                        left: `${ghost.x}%`,
-                        top: `${ghost.y}%`,
-                        transform: `perspective(1000px) rotateX(${ghost.spinX}deg) rotateY(${ghost.spinY}deg) scale(${ghost.teleportPhase === "dying" ? Math.max(0.05, 1 - (ghost.dyingProgress ?? 0) * 0.95) : 1})`,
+                        left: `${ghost.x}px`,
+                        top: `${ghost.y}px`,
+                        transform: `perspective(900px) rotateX(${ghost.spinX}deg) rotateY(${ghost.spinY}deg) scale(${ghost.stretchX * (ghost.teleportPhase === "dying" ? Math.max(0.05, 1 - (ghost.dyingProgress ?? 0)) : 1)}, ${ghost.stretchY * (ghost.teleportPhase === "dying" ? Math.max(0.05, 1 - (ghost.dyingProgress ?? 0)) : 1)})`,
                         opacity: ghost.opacity,
                         cursor: ghost.isDragging ? "grabbing" : "grab",
                         color: `${ghost.color}99`,
                         textShadow: `0 0 10px ${ghost.color}cc`,
                     }}
-                    onMouseDown={(e) => handleMouseDown(idx, e)}
-                    onMouseEnter={(e) => handleGhostMouseEnter(idx, e)}
-                    onMouseMove={(e) => handleGhostMouseMove(idx, e)}
-                    onTouchStart={(e) => handleTouchStart(idx, e)}
+                    onPointerDown={(e) => {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(
+                            e.pointerId,
+                        );
+                        startDrag(ghost.id, e.clientX, e.clientY);
+                    }}
+                    onLostPointerCapture={(e) =>
+                        handleGhostLostCapture(ghost.id, e)
+                    }
                 >
                     {GHOST_ART_STYLES[ghost.artStyle]}
                 </pre>

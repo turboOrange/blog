@@ -20,6 +20,10 @@ const config: Config = {
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/blog/',
 
+  // Apply the saved theme accent before first paint
+  // (scripts src is not baseUrl-prefixed by Docusaurus, hence the /blog/ here)
+  scripts: ['/blog/theme-init.js'],
+
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'turboorange', // Usually your GitHub org/user name.
@@ -56,7 +60,7 @@ const config: Config = {
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
+          onUntruncatedBlogPosts: 'ignore',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -118,7 +122,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Spooky Terminal. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

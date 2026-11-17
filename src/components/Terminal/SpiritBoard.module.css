@@ -8,8 +8,10 @@
   justify-content: stretch;
   border-radius: 12px;
   overflow: hidden;
+  /* opaque enough on its own — no backdrop-filter (it sits inside the
+     terminal's preserve-3d scene, where backdrop reads trigger the
+     compositor black-triangle glitch) */
   background: rgba(4, 0, 12, 0.88);
-  backdrop-filter: blur(6px);
   animation: overlayFadeIn 0.3s ease forwards;
 }
 .overlayClosing {
@@ -118,6 +120,9 @@
   gap: 0;
   overflow: hidden;
   container-type: size;
+  /* touch-action none: the board IS the interaction surface — finger
+     drags in it should not scroll the page underneath */
+  touch-action: none;
   background:
     radial-gradient(ellipse at 50% 40%, rgba(100, 0, 200, 0.08) 0%, transparent 65%),
     repeating-linear-gradient(0deg,   transparent, transparent 48px, rgba(100, 0, 200, 0.025) 48px, rgba(100, 0, 200, 0.025) 49px),
@@ -208,6 +213,13 @@
 .tileInactive .tileFrame {
   opacity: 0.38;
   filter: blur(0.3px);
+}
+
+/* Fallback for browsers without container query units (cqw/cqh):
+   everything still readable, just slightly fixed-size */
+@supports not (font-size: 1cqh) {
+  .tileFrame { font-size: clamp(0.45rem, 2.2vw, 1.4rem); }
+  .tileWide .tileFrame { font-size: clamp(0.55rem, 2.8vw, 1.7rem); }
 }
 
 .tileActive .tileFrame:hover {

@@ -2,8 +2,8 @@
 title: the shape of quantum computing
 date: 2026-04-24
 authors: cgauthier
-tags: [spinachlang, quantum computing]
-description: Reporting issues can be tricky
+tags: [spinachlang, quantum-computing]
+description: How I see quantum computing and why I built a language for it
 ---
 # The shape of quantum computing
 ## Why I'm doing this
@@ -70,7 +70,7 @@ I just think it's an opportunity we have to imagine what would be a better langu
 At the moment, it doesn't matter cause people work with tiny algorithms. For me that's just a sandbox for creativity.
 If you have an idea for an abstraction to add to Spinachlang you can always send me a message or implement it yourself. It's an open source project.
 
-Just a mention, tket are doing a great job in making a good quantum backend to let us compile into many languages. Spinachlang is based on pytket.
+Just a mention, tket is doing a great job in making a good quantum backend to let us compile into many languages. Spinachlang is based on pytket.
 
 ## out of subject
 The hot long days are slowly coming back. I feel like this summer will be great. I can't wait to go swim, hike or walk around.

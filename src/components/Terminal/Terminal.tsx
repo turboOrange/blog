@@ -3,8 +3,15 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import { usePluginData } from '@docusaurus/useGlobalData';
 import styles from './Terminal.module.css';
 import MarkdownRenderer from './MarkdownRenderer';
+import LensLayer from './LensLayer';
 import SpookyAI from './SpookyAI';
 import SpiritBoard from './SpiritBoard';
+import {
+  SPOOKY_THEMES,
+  getTheme,
+  applySpookyTheme,
+  resetSpookyTheme,
+} from './theme';
 
 interface TerminalLine {
   type: 'command' | 'output' | 'system';
@@ -15,7 +22,7 @@ interface TerminalLine {
 interface Command {
   name: string;
   description: string;
-  execute: () => React.ReactNode;
+  execute: (args?: string[]) => React.ReactNode;
 }
 
 // ─── Placeholder ASCII art – replace with your own ───────────────────────────
@@ -25,15 +32,15 @@ ddddddddddddddddddddddddddddddddddddddddddddddddoooooooooooooooollllllllccc
 dddddddddddddddddddddddxxddxdddddlc:;;;,,,,,,;:cloooooooooooooooollllllllcc
 ddddddddddddddxxxxxxxxxxxxxxdlc;'...           ..';cloooooooooooooollllllll
 dddddddddxxxxxxxxxxxxxxxddl:'.........             .'coooooooooooooolllllll
-ddddddxxxxxxxxxxxxxxxxdoc,.........''''''''....      .;loodddooooooooolllll
-dddddxxxxxxxxxxxxxxxxo:'......';cllooooooolllc:;,..  .':loooodddooooooollll
+ddddddxxxxxxxxxxxxxxxxdoc,.........''''''''....      .;loodddooooooooollll
+dddddxxxxxxxxxxxxxxxxo:'......';cllooooooolllc:;,..  .':loooodddooooooooolll
 dxxxxxxxxxxxxxxxxxxdl,. ...';coodddddddddddddoollc:,...';cllooodoooooooolll
-xxxxxxxxxxxxxxxxxxdc.. ...;loddxxxxxxxxxxdddddddoolc:,'.';:cloooddooooooool
+xxxxxxxxxxxxxxxxxxdc.. ...;loddxxxxxxxxxxdddddddoolc:,'.';:clooddooooooool
 xxxxxxxxxxxxkkkxxl,.  ..,codddxxxxxxxxxxxxxddddddoollc;,..,;cloodddoooooooo
 xxxxxxxxxxxkkxxdc'.  .':loodddxxxxxxxxxxxxxxdddddoolllc:;'..,cooddddooooooo
 xxxxxxxxkkxxxxo:'.. .'cloodddxxkkkkkkkkkkkkkkxxxxdooollcc:,..'coodddddooooo
 xxxxxxxxxxkkxo:'..  .:lodddddddxxkkOOOOOOOOkkkxxxxxddollcc:'..,loddddddoooo
-xxxxxxxxxxkxdc,..  .,cccc:;,,,,;:coxOOOOOOkxdol:;:cloollcc:,...;oddddddoooo
+xxxxxxxxxxkxdc,..  .,cccc:;,,,,;:coxOOOOOOkxdol:;:cloollcc:' ,oddddddoooo
 xxxxxxxxkxxdl;'.. ..,'.',;;;;,,;:codkkkOOkxdl:;'....'''';::;'. 'lddddddddoo
 xxxxxxkkxxdo:'.......';lddxxxddddoddxxxkkxdoolllccllcc;'..,;'. .:ddddddddoo
 xxxxxkkxxxo:,'.....';clc:::;;;clllllodxxxdlcclccc:cccllc;..,,. .;oddddddddo
@@ -45,15 +52,15 @@ xxxxxxoc;'.......;odxxkkxxxxkkkxodkOKKKK0Oxlldxdddddxddddolc:,,codddddddddd
 xxxxxdl:'........:dxxxxkxxkOO0Oxlc;lxkkxl;;clokkkxxxxxxxddoc:,:lddddddddddd
 xxxxxdl;........'cddxxxxkkOO00kdol::loolc;;looxOOkkxxxxddool:,:oddddddddddd
 xxxxxoc,........,lddxxxxkOOOOkkxdoodxxdxxddoodxkOOkkxxdddoll;,:oddddddddddd
-xxxxdo;....... .,loddxxxkkOkkxxxxdxkkkkkkxxddxxxkkkkxxddoolc;,:oddddddddddo
-xxxxdc,.....   .,coddxxxkkkxxxxkkkkOOOOOOkkxxxdxxxxxxdddolc:,,:oddddddddddo
-xxxdo:'....    .,clodxxxxxxxxxxxddddxxxxxxxxxxxddxxxdddoolc;,,codddddddddoo
-xxxdl;..........'cllodxxxxxdollllloooooollllloooodxxddollc:;,;codddddddddoo
+xxxxdo;....... .,loddxxxkkOkkxxxxdxkkkkkkxxddxxxkkkkxxddoolc;,:oddddddddoo
+xxxxdc,.....   .,coddxxxkkkxxxxkkkkOOOOOOkkxxxdxxxxxxdddolc:,,:oddddddddoo
+xxxdo:'....    .,clodxxxxxxxxxxxddddxxxxxxxxxxxddxxxdddoolc;,,codddddddddddoo
+xxxdl;..........'cllodxxxxxdollllloooooollllloooodxxddollc:;,;codddddddddddoo
 xxdoc,...........;lllodxxxdddddxxxkxxxxxxxdddollloddddoccc:,,:loddddddddooo
 xdol:;'...........:cllodddddxxxkkkkkkkxxxxxxxxxddddddolcc:;';coddddddddoooo
 ooollc,'........  .:ccloooddxxxkkkkkkkkkkkkkxxxddoooolc::,',:loddddddddoooo
 ooollc:,'.......   .;::clloodxkkkkkkOOOOkkkkxxddollcc::;,',:loddddddddooooo
-ooollc:,......      .,;::cclodxxxkkOOOOOkkxxxdolcc:::;;'',:clodddddoooooooo
+ooollc:,......      .,;::cclodxxxkkOOOOOkkxxxdolcc:::;;',,:clodddddoooooooo
 ooccc:;'.....        .',;;;:clodxxkkkkkkkkxdool:;;;;,'...,;cloddddooooooooo
 ooc;;,'..           ....,,,',;cloddxxxxxxddlc;,',,,'...    ..':odoooooooooo
 l:'...             ..'''',,;,,,,;::ccclcc:;,'',,,,.....       .';:looooooll
@@ -65,11 +72,18 @@ l:'...             ..'''',,;,,,,;::ccclcc:;,'',,,,.....       .';:looooooll
                        .;clllllllccccccccllllc:;'.
                          .';coooooooooooooolc,..
                             .';:::;;,,,,,,'..
-
 `;
 // ─────────────────────────────────────────────────────────────────────────────
 
 const EDGE_ZONE = 60;      // px from left/right edge that starts a drag
+
+// Is this a touch-first device? Checked once. Used to disable the fancy
+// 3D tilt/flip gestures (which fight touch scrolling) and the autofocus
+// (which pops the on-screen keyboard open on page load).
+function isTouchLike(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(pointer: coarse)').matches;
+}
 
 export default function Terminal() {
   const { siteConfig } = useDocusaurusContext();
@@ -84,6 +98,7 @@ export default function Terminal() {
   const [spookyAiOpen, setSpookyAiOpen] = useState(false);
   const [spiritBoardOpen, setSpiritBoardOpen] = useState(false);
   const [spiritBoardExtreme, setSpiritBoardExtreme] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<string | null>(null);
 
   type BlogPost = { title: string; slug: string; date: string; description: string; content: string; tags: string[] };
   const { posts: blogPosts } = usePluginData('blog-global-data') as { posts: BlogPost[] };
@@ -92,7 +107,7 @@ export default function Terminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
+  const touchLike = useRef<boolean>(false);
 
   // All mutable interaction state in one ref — handlers registered once,
   // never capture stale React state.
@@ -112,33 +127,82 @@ export default function Terminal() {
       `perspective(1200px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(${scale},${scale},${scale})`;
   };
 
+  // Restore the persisted theme name on mount (colors are applied
+  // pre-paint by static/theme-init.js; this just tracks the name).
+  useEffect(() => {
+    touchLike.current = isTouchLike();
+    try {
+      const saved = localStorage.getItem('spookyTheme');
+      if (saved && getTheme(saved)) setActiveTheme(saved);
+    } catch { /* private mode */ }
+  }, []);
+
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    if (!wrapper || touchLike.current) return; // no 3D motion on touch
 
-    const onMouseMove = (e: MouseEvent) => {
-      if (iRef.current.dragging) return;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
-        const el = innerRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const maxD = Math.max(rect.width, rect.height);
-        const dx = Math.max(-1, Math.min(1, (e.clientX - cx) / (maxD / 2)));
-        const dy = Math.max(-1, Math.min(1, (e.clientY - cy) / (maxD / 2)));
-        const base = iRef.current.baseRotY;
-        setTransform(base + dx * 8, -dy * 8, 1.01);
-      });
+    // ── Idle breathing — a slow hologram drift instead of mouse-follow. ──
+    // Two sine waves at incommensurate rates (golden-ratio-ish) so the
+    // sway never visibly loops. Springs smooth the wobble the flip leaves
+    // behind and recover the resting drift afterwards.
+    let running = true;
+    let t = 0;
+    let rAF = 0;
+    let last = performance.now();
+    let acc = 0;
+    // spring state for rotX/rotY around the current breathing target
+    let sx = 0, svx = 0;   // rotX spring
+    let sy = 0, svy = 0;   // rotY spring (target = baseRotY + sway)
+
+    const TICK_MS = 1000 / 60;
+
+    const loop = (now: number) => {
+      if (!running) return;
+      let dt = now - last;
+      last = now;
+      if (dt > 250) dt = TICK_MS; // skip tab-pause catch-up
+      acc += dt;
+      let stepped = false;
+      while (acc >= TICK_MS) {
+        acc -= TICK_MS;
+        t += 1;
+        stepped = true;
+
+        // breathing targets: tiny tilt, ~0.15 Hz — barely there
+        const tx = Math.sin(t * 0.0038) * 1.1;                 // rotX ±1.1°
+        const ty = iRef.current.baseRotY + Math.sin(t * 0.0024) * 1.2; // rotY ±1.2°
+
+        // critically-damped-ish spring toward the target
+        const k = 0.055, c = 0.82;
+        svx += (tx - sx) * k; svx *= c; sx += svx;
+        svy += (ty - sy) * k; svy *= c; sy += svy;
+      }
+      if (stepped) {
+        setTransform(sy, sx, 1);
+
+        // glare sweep: slide the specular highlight opposite the tilt
+        // (light stays put, the pane turns through it) and brighten it
+        // with tilt magnitude — the liquid-glass cue. Class names are
+        // hashed by CSS modules, so find the sweep by walking the
+        // terminal container's children.
+        const tc = innerRef.current?.querySelector('[class*="terminalContainer"]') as HTMLElement | null;
+        const sweepEl = tc?.parentElement?.querySelector('[class*="glareSweep"]') as HTMLElement | null;
+        if (sweepEl && tc) {
+          const gx = 50 + (sx / 1.1) * 35;
+          const gy = 30 - ((sy - iRef.current.baseRotY) / 1.2) * 20;
+          // eased loudness: quiet near the sway extremes' midpoint, blooming
+          // as the swing approaches its peak — keeps resting calm
+          const mag = Math.min(1, Math.hypot(sx, sy - iRef.current.baseRotY) / 1.2);
+          sweepEl.style.setProperty('--glare-x', gx.toFixed(1) + '%');
+          sweepEl.style.setProperty('--glare-y', gy.toFixed(1) + '%');
+          sweepEl.style.setProperty('--glare-o', (mag * mag * 0.9).toFixed(2));
+        }
+      }
+      rAF = requestAnimationFrame(loop);
     };
+    rAF = requestAnimationFrame(loop);
 
-    const onMouseLeave = () => {
-      const base = iRef.current.baseRotY;
-      setTransform(base, 0, 1, 'transform 0.5s ease');
-      setTimeout(() => { if (innerRef.current) innerRef.current.style.transition = ''; }, 500);
-    };
-
+    // ── Edge-cursor hint + edge-drag flip (unchanged behaviour) ──
     const onWrapperMouseMove = (e: MouseEvent) => {
       const rect = wrapper.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -152,13 +216,17 @@ export default function Terminal() {
       const isLeft  = x < EDGE_ZONE;
       const isRight = x > rect.width - EDGE_ZONE;
       if (!isLeft && !isRight) return;
+      // stop the breathing while dragging — the drag owns the transform
+      running = false;
+      cancelAnimationFrame(rAF);
+      // melt the refraction rim while the slab turns — backdrop-filter
+      // bands during a rotate are an unnecessary glitch/aliasing surface
+      wrapper.dataset.lens = 'hidden';
       iRef.current.dragging = true;
       iRef.current.dragSide = isLeft ? 'left' : 'right';
       iRef.current.startX   = e.clientX;
       // capture the settled rotation so drag continues from it
-      iRef.current.baseRotY = iRef.current.flipped
-        ? Math.round(iRef.current.baseRotY / 180) * 180
-        : Math.round(iRef.current.baseRotY / 180) * 180;
+      iRef.current.baseRotY = Math.round(iRef.current.baseRotY / 180) * 180;
       wrapper.setPointerCapture(e.pointerId);
       e.preventDefault();
     };
@@ -187,23 +255,30 @@ export default function Terminal() {
       setTransform(snapped, 0, 1, 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)');
       setTimeout(() => { if (innerRef.current) innerRef.current.style.transition = ''; }, 410);
       setIsFlipped(iRef.current.flipped);
+
+      // hand back to the breathing loop, springs take over from wherever
+      // the snap left the transform
+      delete wrapper.dataset.lens; // frost the rim back in once settled
+      sx = 0; svx = 0.5;
+      sy = snapped; svy = 0;
+      last = performance.now();
+      acc = 0;
+      running = true;
+      rAF = requestAnimationFrame(loop);
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    document.documentElement.addEventListener('mouseleave', onMouseLeave);
     wrapper.addEventListener('mousemove', onWrapperMouseMove);
     wrapper.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
 
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      document.documentElement.removeEventListener('mouseleave', onMouseLeave);
+      running = false;
+      cancelAnimationFrame(rAF);
       wrapper.removeEventListener('mousemove', onWrapperMouseMove);
       wrapper.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
@@ -232,7 +307,7 @@ export default function Terminal() {
   ▒   ██▒▒██▄█▓▒ ▒▒██   ██░▒██   ██░▓██ █▄   ░ ▐██▓░
 ▒██████▒▒▒██▒ ░  ░░ ████▓▒░░ ████▓▒░▒██▒ █▄  ░ ██▒▓░
 ▒ ▒▓▒ ▒ ░▒▓▒░ ░  ░░ ▒░▒░▒░ ░ ▒░▒░▒░ ▒ ▒▒ ▓▒   ██▒▒▒
-░ ░▒  ░ ░░▒ ░       ░ ▒ ▒░   ░ ▒ ▒░ ░ ░▒ ▒░ ▓██ ░▒░
+░ ░▒  ░ ░░▒ ░       ░ ▒ ▒░   ░ ▒ ▒░ ░ ░▒ ▒░  ▓██ ░▒░
 ░  ░  ░  ░░       ░ ░ ░ ▒  ░ ░ ░ ▒  ░ ░░ ░  ▒ ▒ ░░
       ░               ░ ░      ░ ░  ░  ░    ░ ░
                                             ░ ░
@@ -242,10 +317,50 @@ export default function Terminal() {
 ░ ▓██▓ ░ ▒▓█  ▄ ▒██▀▀█▄  ▒██    ▒██ ░██░▓██▒  ▐▌██▒░██▄▄▄▄██ ▒██░     ▓██▒
   ▒██▒ ░ ░▒████▒░██▓ ▒██▒▒██▒   ░██▒░██░▒██░   ▓██░ ▓█   ▓██▒░██████▒ ▒▄▄
   ▒ ░░   ░░ ▒░ ░░ ▒▓ ░▒▓░░ ▒░   ░  ░░▓  ░ ▒░   ▒ ▒  ▒▒   ▓▒█░░ ▒░▓  ░ ░▀▀▒
-    ░     ░ ░  ░  ░▒ ░ ▒░░  ░      ░ ▒ ░░ ░░   ░ ▒░  ▒   ▒▒ ░░ ░ ▒  ░ ░  ░
+    ░      ░ ░  ░  ░▒ ░ ▒░░  ░      ░ ▒ ░░ ░░   ▒▒░  ▒   ▒▒ ░░ ░  ▒  ░ ░  ░
   ░         ░     ░░   ░ ░      ░    ▒ ░   ░   ░ ░   ░   ▒     ░ ░       ░
             ░  ░   ░            ░    ░           ░       ░  ░    ░  ░ ░
 `;
+
+  const runThemeCommand = (args?: string[]): React.ReactNode => {
+    if (!args || args.length === 0) {
+      const list = SPOOKY_THEMES.map(
+        (t) => `- **${t.emoji} ${t.name}**${t.name === activeTheme ? ' *(current)*' : ''}`
+      ).join('\n');
+      return (
+        <MarkdownRenderer
+          content={`# Themes 🎨\n\nUsage: \`theme <name>\` — changes the accent color of the whole site.\n\n${list}\n\nType \`theme reset\` to return to the default.`}
+        />
+      );
+    }
+    const name = args[0].toLowerCase();
+    if (name === 'reset' || name === 'default') {
+      resetSpookyTheme();
+      setActiveTheme(null);
+      return <div>🌈 Theme reset to default.</div>;
+    }
+    const theme = getTheme(name);
+    if (!theme) {
+      return (
+        <div className={styles.error}>
+          Unknown theme: {name}<br />
+          Type 'theme' to list available themes.
+        </div>
+      );
+    }
+    applySpookyTheme(theme);
+    setActiveTheme(theme.name);
+    const chipStyle: React.CSSProperties = {
+      color: theme.accent,
+      textShadow: `0 0 10px ${theme.accent}`,
+    };
+    return (
+      <div>
+        {theme.emoji} Theme set to <strong style={chipStyle}>{theme.name}</strong> —
+        feel the vibe change.
+      </div>
+    );
+  };
 
   const commands: Record<string, Command> = {
     menu: {
@@ -258,12 +373,17 @@ export default function Terminal() {
         return <MarkdownRenderer content={`# Available Commands\n\n${commandList}`} />;
       },
     },
+    theme: {
+      name: 'theme',
+      description: 'Change the accent color 🎨 (e.g. `theme dracula`, `theme` lists all)',
+      execute: (args) => runThemeCommand(args),
+    },
     about: {
       name: 'about',
       description: 'Show information about me',
       execute: () => {
         if (markdownContent.about) return <MarkdownRenderer content={markdownContent.about} />;
-        return <MarkdownRenderer content={`# About Me\n\nHi! Welcome to my space!\n\n## Background\n\nI'm just a curious person that likes building things. I'm particularly interested in electronics and computing.\n\nFollowing those interests I now have:\n- An electronic repair DEP\n- An electronics computers and networks DEC\n- A computer science BAC\n\nAnd I've been working as a software developer in test and QA for a while.\nI just love building stuff.\nIn whatever I do you might find ints of my love for horror and retro computing.\n`} />;
+        return <MarkdownRenderer content={`# About Me\n\nHi! Welcome to my space!\n\n## Background\n\nI'm just a curious person that likes building things. I'm particularly interested in electronics and computing.\n\nFollowing those interests I now have:\n- An electronic repair DEP\n- An electronics computers and networks DEC\n- A computer science BAC\n\nAnd I've been working as a software developer in test and QA for a while.\nI just love building stuff.\nIn whatever I do you might find hints of my love for horror and retro computing.\n`} />;
       },
     },
     links: {
@@ -271,7 +391,7 @@ export default function Terminal() {
       description: 'Show my favorite links',
       execute: () => {
         if (markdownContent.links) return <MarkdownRenderer content={markdownContent.links} />;
-        return <MarkdownRenderer content={`# Favorite Links\n\n## Funny git repos:\n- [recall for linux](https://github.com/rolflobker/recall-for-linux)\n- [the best programing language](https://github.com/TodePond/GulfOfMexico)\n## Interesting historic repos:\n- [Apollo 11's code](https://github.com/chrislgarry/Apollo-11)\n`} />;
+        return <MarkdownRenderer content={`# Favorite Links\n\n## Funny git repos:\n- [recall for linux](https://github.com/rolflobker/recall-for-linux)\n- [the best programming language](https://github.com/TodePond/GulfOfMexico)\n## Interesting historic repos:\n- [Apollo 11's code](https://github.com/chrislgarry/Apollo-11)\n`} />;
       },
     },
     projects: {
@@ -279,7 +399,7 @@ export default function Terminal() {
       description: 'List my projects and their status',
       execute: () => {
         if (markdownContent.projects) return <MarkdownRenderer content={markdownContent.projects} />;
-        return <MarkdownRenderer content={`# My Projects\n\n## Active Projects\n\n- [Personal Blog](https://github.com/turboOrange/blog) I use docusaurus (react based generator). My goal is to personalise it to the maximum. Making it feel good and real.\n- [spinashlang](https://github.com/spinachlang/spinachlang) A quantum language I made to simplify writing quantum code. Advanced but not finished.\n\n## Inactive Projects\n- [readcode](https://github.com/turboOrange/readcode) A university group project to explore using AI to help learning how to read code.\n- [pride ocarina](https://github.com/turboOrange/pride-ocarina) A project to make people learn to solder during pride month.\n`} />;
+        return <MarkdownRenderer content={`# My Projects\n\n## Active Projects\n\n- [Personal Blog](https://github.com/turboOrange/blog) I use docusaurus (react based generator). My goal is to personalise it to the maximum. Making it feel good and real.\n- [spinachlang](https://github.com/spinachlang/spinachlang) A quantum language I made to simplify writing quantum code. Advanced but not finished.\n\n## Inactive Projects\n- [readcode](https://github.com/turboOrange/readcode) A university group project to explore using AI to help learning how to read code.\n- [pride ocarina](https://github.com/turboOrange/pride-ocarina) A project to make people learn to solder during pride month.\n`} />;
       },
     },
     clear: {
@@ -294,7 +414,7 @@ export default function Terminal() {
     },
     spookyai: {
       name: 'spookyai',
-      description: 'Launch SpookyAI assistant 👻 The most powerfull client side AI every made in human history. It can do anything... but it refuses to do anything.',
+      description: 'Launch SpookyAI assistant 👻 The most powerful client-side AI ever made in human history. It can do anything... but it refuses to do anything.',
       execute: () => null,
     },
     spiritboard: {
@@ -340,7 +460,8 @@ export default function Terminal() {
         setLines((prev) => [...prev, { type, content }]);
         if (delay === 1500) {
           setIsTyping(false);
-          setTimeout(() => inputRef.current?.focus(), 100);
+          // don't yank up the on-screen keyboard on touch devices
+          if (!touchLike.current) setTimeout(() => inputRef.current?.focus(), 100);
         }
       }, delay);
     });
@@ -353,24 +474,32 @@ export default function Terminal() {
   }, [lines]);
 
   const handleCommand = (cmd: string) => {
-    const trimmedCmd = cmd.trim().toLowerCase();
+    const trimmedCmd = cmd.trim();
+    const lowerCmd = trimmedCmd.toLowerCase();
     if (trimmedCmd) {
       setCommandHistory((prev) => [...prev, trimmedCmd]);
       setHistoryIndex(-1);
     }
     setLines((prev) => [...prev, { type: 'command', content: `$ ${cmd}` }]);
     if (!trimmedCmd) return;
-    if (trimmedCmd === 'clear') { setLines([]); return; }
-    if (trimmedCmd === 'spookyai') { setSpookyAiOpen(true); return; }
-    if (trimmedCmd === 'spiritboard' || trimmedCmd === 'spiritboard -e' || trimmedCmd === 'spiritboard --extreme') {
-      const isExtreme = trimmedCmd.includes('-e') || trimmedCmd.includes('--extreme');
+    if (lowerCmd === 'clear') { setLines([]); return; }
+    if (lowerCmd === 'spookyai') { setSpookyAiOpen(true); return; }
+    if (lowerCmd === 'spiritboard' || lowerCmd === 'spiritboard -e' || lowerCmd === 'spiritboard --extreme') {
+      const isExtreme = lowerCmd.includes('-e') || lowerCmd.includes('--extreme');
       setSpiritBoardExtreme(isExtreme);
       setSpiritBoardOpen(true);
       return;
     }
+    // theme <name> — first command with an argument
+    if (lowerCmd === 'theme' || lowerCmd.startsWith('theme ')) {
+      const args = lowerCmd.split(/\s+/).slice(1);
+      const output = runThemeCommand(args);
+      if (output) setLines((prev) => [...prev, { type: 'output', content: output }]);
+      return;
+    }
     // summon [n] — dispatch events to FloatingGhosts
-    if (trimmedCmd === 'summon' || trimmedCmd.match(/^summon\s+\d+$/)) {
-      const countStr = trimmedCmd.split(/\s+/)[1];
+    if (lowerCmd === 'summon' || lowerCmd.match(/^summon\s+\d+$/)) {
+      const countStr = lowerCmd.split(/\s+/)[1];
       const count = countStr ? Math.min(parseInt(countStr, 10), 20) : 1;
       for (let i = 0; i < count; i++) {
         setTimeout(() => window.dispatchEvent(new Event('summon-ghost')), i * 120);
@@ -381,7 +510,7 @@ export default function Terminal() {
       }]);
       return;
     }
-    if (trimmedCmd === 'killghosts') {
+    if (lowerCmd === 'killghosts') {
       window.dispatchEvent(new Event('kill-ghosts'));
       setLines((prev) => [...prev, {
         type: 'output',
@@ -390,7 +519,7 @@ export default function Terminal() {
       return;
     }
     // cat is ONLY allowed as `cat blog/<slug>` — block everything else
-    if (trimmedCmd.startsWith('cat ') && !trimmedCmd.match(/^cat\s+blog\/[^\s/]+$/)) {
+    if (lowerCmd.startsWith('cat ') && !lowerCmd.match(/^cat\s+blog\/[^\s/]+$/)) {
       setLines((prev) => [...prev, {
         type: 'output',
         content: <div className={styles.error}>Permission denied. Only `cat blog/&lt;slug&gt;` is allowed.</div>,
@@ -398,7 +527,7 @@ export default function Terminal() {
       return;
     }
     // Handle `cat blog/<slug>` — read a specific blog post
-    const catBlogMatch = trimmedCmd.match(/^cat\s+blog\/(.+)$/);
+    const catBlogMatch = lowerCmd.match(/^cat\s+blog\/(.+)$/);
     if (catBlogMatch) {
       const slug = catBlogMatch[1].trim();
       const post = blogPosts.find(p => p.slug === slug);
@@ -421,13 +550,13 @@ export default function Terminal() {
       return;
     }
     // Handle `ls blog` — alias for blog command
-    if (trimmedCmd === 'ls blog' || trimmedCmd === 'ls /blog') {
+    if (lowerCmd === 'ls blog' || lowerCmd === 'ls /blog') {
       const output = commands['blog'].execute();
       if (output) setLines((prev) => [...prev, { type: 'output', content: output }]);
       return;
     }
-    if (commands[trimmedCmd]) {
-      const output = commands[trimmedCmd].execute();
+    if (commands[lowerCmd]) {
+      const output = commands[lowerCmd].execute();
       if (output) setLines((prev) => [...prev, { type: 'output', content: output }]);
     } else {
       setLines((prev) => [...prev, {
@@ -512,6 +641,10 @@ export default function Terminal() {
 
   return (
     <div ref={wrapperRef} className={styles.flipWrapper}>
+      {/* Live refraction rim — flat sibling UNDER the 3-D slab, sampling the
+          starfield behind the pane border in real time. Flip drags fade it
+          out via [data-lens='hidden'] on the wrapper (see LensLayer css). */}
+      <LensLayer />
       <div ref={innerRef} className={styles.flipInner}>
 
         {/* ── Real 3-D edge faces — siblings in the same preserve-3d context ── */}
@@ -524,8 +657,12 @@ export default function Terminal() {
 
         {/* Single terminal — always rendered, drives the height */}
         <div className={styles.terminalContainer} onClick={() => !isFlipped && inputRef.current?.focus()}>
-          {/* Specular glare streak — sits above everything, pointer-events: none */}
+          {/* Specular glare layers — sit above everything, pointer-events: none.
+              glassGlare is the static polarization sheen; glareSweep is the
+              tilt-tracking highlight driven by --glare-x/y/o from the
+              breathing loop — this is what sells "liquid glass". */}
           <div className={styles.glassGlare} aria-hidden="true" />
+          <div className={styles.glareSweep} aria-hidden="true" />
           <div className={styles.terminalHeader}>
             <div className={styles.terminalButtons}>
               <span className={styles.btnClose}></span>
@@ -551,7 +688,10 @@ export default function Terminal() {
                   onKeyDown={handleKeyDown}
                   className={styles.input}
                   spellCheck={false}
-                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  enterKeyHint="send"
                 />
               </div>
             )}

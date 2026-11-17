@@ -1,0 +1,113 @@
+/* ── Live refraction rim ("liquid glass" border distortion) ────────────────
+   Thin backdrop-filter bands that frost the pane's rim — the backdrop
+   (twinkling stars, anything) visibly bends through the pane's border,
+   LIVE, because backdrop-filter re-samples every frame. Not a baked
+   snapshot: things that move behind the pane warp through the rim as
+   they pass.
+
+   Where they live: flat siblings inside flipWrapper, OUTSIDE the
+   preserve-3d subtree — no transforms or masks on them, the same
+   compositor path as the frosted sticky banner, not the 3-D path that
+   produced the black triangles. They paint OVER the pane's outer rim
+   only — the sub-pixel-thin rim itself, never the header or content
+   (header buttons sit at top≈12px; bands on top and sides stop short).
+
+   Compositor mechanics (all verified empirically against headless
+   Chromium):
+   - Each band MUST carry z-index: 1 — without it, Chromium squashes
+     band + backdrop into one composited layer and backdrop-filter is a
+     no-op. With z-index the band promotes to its own layer and samples
+     the live page beneath (stars twinkle through the frost in real time).
+   - .lensRim (the wrapper) must NOT have z-index — a z-indexed wrapper
+     becomes a stacking context = backdrop root, and the bands go blind.
+   - flipInner must NOT have z-index either — a z-indexed slab under the
+     bands breaks their sampling just as badly (bands only filter when
+     they can promote above the whole ink of the slab; that is what
+     puts them over the pane's own ink, sampling pane + stars together).
+   - Only the standard backdrop-filter property: authoring the -webkit-
+     alias next to it makes the prod build's dedupe pass drop the
+     standard form, and Chromium ignores the bare alias (autoprefixer
+     re-inserts it in the right order).
+
+   The flip edge-drag sets data-lens='hidden' on flipWrapper
+   (Terminal.tsx) — the rim melts away while the slab rotates, refrosts
+   when it settles.
+
+   If Chromium ever resurfaces the triangle glitch even on this flat
+   path, delete <LensLayer /> from Terminal.tsx and this file — the
+   pane still reads as glass without the rim. */
+
+.lensRim {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  /* NO z-index here. Opacity stays exactly 1 while visible: a group
+     opacity < 1 would limit the bands' backdrop root (see .band). */
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+/* flip edge-drag sets data-lens='hidden' on the wrapper (Terminal.tsx);
+   only that element ever carries the attribute */
+:global([data-lens='hidden']) .lensRim {
+  opacity: 0;
+}
+
+.band {
+  position: absolute;
+  /* z-index is what makes the live sampling work: without it Chromium
+     squashes band + backdrop into one composited layer and the filter
+     has nothing outside its own layer to sample (a verified no-op). */
+  z-index: 1;
+  /* standard property only — see header note about the -webkit- alias */
+  backdrop-filter: blur(10px) saturate(1.2) brightness(1.08);
+  /* full-opacity frost: the band with its filter IS the rim; verified —
+     the blur visibly smears stars crossing under it live */
+  opacity: 1;
+  /* uniform radius, no masks, no overflow:hidden — plain rounded rects,
+     the compositor-friendly shape (anti-glitch discipline on this page) */
+  border-radius: 18px;
+  outline: 1px solid transparent;
+}
+
+/* Bands hug the pane's rim from above, but stay thin enough that they
+   only cover the pane's hairline border zone — the slab's beading rim
+   highlights, not the header or content. Corners pulled in past the
+   pane's 18px radius so nothing pokes out. */
+
+.bandTop {
+  /* stops at 8px — header buttons start at ~12px, never frosted */
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 8px;
+}
+
+.bandBottom {
+  bottom:  0;
+  left: 24px;
+  right: 24px;
+  height: 8px;
+}
+
+.bandLeft {
+  left: 0;
+  top: 24px;
+  bottom: 24px;
+  width: 8px;
+}
+
+.bandRight {
+  right: 0;
+  top: 24px;
+  bottom: 24px;
+  width: 8px;
+}
+
+@media (max-width: 768px) {
+  /* phones: no 3-D slab and no breathing, so no rim — the small pane's
+     ambient glow reads glassy without extra compositor work */
+  .lensRim {
+    display: none;
+  }
+}

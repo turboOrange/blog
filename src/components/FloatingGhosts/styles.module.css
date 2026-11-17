@@ -1,12 +1,12 @@
 .ghostContainer {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    /* 100% of the viewport box, NOT 100vw (which includes the scrollbar
+       and causes page-level horizontal scrollbars in some browsers) */
+    inset: 0;
     pointer-events: none;
     z-index: 9999;
     overflow: hidden;
+    contain: layout style;
 }
 
 .ghost {
@@ -15,56 +15,38 @@
     line-height: 1.1;
     color: rgba(88, 28, 135, 0.75);
     text-shadow: 0 0 8px rgba(88, 28, 135, 0.4);
-    animation: float 3s ease-in-out infinite;
-    transition: transform 0.12s ease-out;
+    /* NOTE: no CSS keyframe animation on transform here — all movement,
+       wobble and bounce are driven by JS so they stay consistent across
+       browsers (an animation would override the inline transform). */
+    transition: opacity 0.25s ease-out;
     will-change: transform, opacity;
     margin: 0;
     padding: 0;
     white-space: pre;
-    font-family: monospace;
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+        'Liberation Mono', monospace;
     background: transparent;
     cursor: grab;
     user-select: none;
+    -webkit-user-select: none;
     pointer-events: auto;
     touch-action: none;
+    transform-origin: center;
     transform-style: preserve-3d;
-    overflow: hidden;
-    max-width: 100vw;
+    max-width: 100%;
 }
 
 @media (max-width: 768px) {
     .ghost {
-        font-size: 0.45rem;
+        font-size: 0.6rem;
         line-height: 1.05;
     }
 }
 
 .ghost.dragging {
     cursor: grabbing;
-    animation: none;
-    filter: brightness(1.3);
-}
-
-.ghost:nth-child(2) {
-    color: rgba(190, 24, 93, 0.75);
-    text-shadow: 0 0 8px rgba(190, 24, 93, 0.4);
-    animation-delay: -1s;
-}
-
-.ghost:nth-child(3) {
-    color: rgba(14, 116, 144, 0.75);
-    text-shadow: 0 0 8px rgba(14, 116, 144, 0.4);
-    animation-delay: -2s;
-}
-
-@keyframes float {
-    0%,
-    100% {
-        transform: translateY(0px) rotate(0deg);
-    }
-    50% {
-        transform: translateY(-20px) rotate(5deg);
-    }
+    filter: brightness(1.3) drop-shadow(0 0 14px currentColor);
+    transition: none;
 }
 
 @keyframes wavy-dissolve {
@@ -150,15 +132,8 @@
     text-shadow: 0 0 15px rgba(167, 139, 250, 1);
 }
 
-[data-theme="dark"] .ghost:nth-child(2) {
-    color: rgba(244, 114, 182, 0.8);
-    text-shadow: 0 0 15px rgba(244, 114, 182, 1);
-}
-
-[data-theme="dark"] .ghost:nth-child(3) {
-    color: rgba(103, 232, 249, 0.8);
-    text-shadow: 0 0 15px rgba(103, 232, 249, 1);
-}
+/* Backdrop-filter accelerates differently per browser but either way the
+   trash can sits in a fixed container that never expands the page. */
 
 /* ── Trash can ───────────────────────────────────────── */
 .trashCan {
@@ -168,7 +143,8 @@
     z-index: 10000;
     font-size: 0.9rem;
     line-height: 1.3;
-    font-family: monospace;
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+        'Liberation Mono', monospace;
     white-space: pre;
     margin: 0;
     padding: 0.5rem 0.8rem;
@@ -291,7 +267,8 @@
     line-height: 1;
     pointer-events: none;
     z-index: 10001;
-    font-family: monospace;
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+        'Liberation Mono', monospace;
     transition: none;
     will-change: transform, opacity;
     text-shadow: 0 0 6px currentColor;

@@ -11,8 +11,9 @@ const extractText = (children: React.ReactNode): string => {
   if (typeof children === 'string') return children;
   if (typeof children === 'number') return String(children);
   if (Array.isArray(children)) return children.map(extractText).join('');
-  if (React.isValidElement(children) && children.props.children) {
-    return extractText(children.props.children);
+  if (React.isValidElement(children)) {
+    const props = children.props as { children?: React.ReactNode };
+    return extractText(props.children);
   }
   return '';
 };
@@ -42,20 +43,28 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <ReactMarkdown
         components={{
           // Custom styling for markdown elements with fade effect
-          h1: ({ node, children, ...props }) => <h1 className={styles.h1} {...props}><FadeText>{children}</FadeText></h1>,
-          h2: ({ node, children, ...props }) => <h2 className={styles.h2} {...props}><FadeText>{children}</FadeText></h2>,
-          h3: ({ node, children, ...props }) => <h3 className={styles.h3} {...props}><FadeText>{children}</FadeText></h3>,
-          p: ({ node, children, ...props }) => <p className={styles.p} {...props}><FadeText>{children}</FadeText></p>,
-          a: ({ node, ...props }) => <a className={styles.a} {...props} target="_blank" rel="noopener noreferrer" />,
-          ul: ({ node, ...props }) => <ul className={styles.ul} {...props} />,
-          ol: ({ node, ...props }) => <ol className={styles.ol} {...props} />,
-          li: ({ node, children, ...props }) => <li className={styles.li} {...props}><FadeText>{children}</FadeText></li>,
-          code: ({ node, inline, ...props }) =>
-            inline ? <code className={styles.inlineCode} {...props} /> : <code className={styles.code} {...props} />,
-          pre: ({ node, ...props }) => <pre className={styles.pre} {...props} />,
-          blockquote: ({ node, children, ...props }) => <blockquote className={styles.blockquote} {...props}><FadeText>{children}</FadeText></blockquote>,
-          hr: ({ node, ...props }) => <hr className={styles.hr} {...props} />,
-          strong: ({ node, children, ...props }) => <strong className={styles.strong} {...props}><FadeText>{children}</FadeText></strong>,
+          h1: ({ children, ...props }) => <h1 className={styles.h1} {...props}><FadeText>{children}</FadeText></h1>,
+          h2: ({ children, ...props }) => <h2 className={styles.h2} {...props}><FadeText>{children}</FadeText></h2>,
+          h3: ({ children, ...props }) => <h3 className={styles.h3} {...props}><FadeText>{children}</FadeText></h3>,
+          p: ({ children, ...props }) => <p className={styles.p} {...props}><FadeText>{children}</FadeText></p>,
+          a: ({ children, ...props }) => <a className={styles.a} {...props} target="_blank" rel="noopener noreferrer">{children}</a>,
+          ul: ({ children, ...props }) => <ul className={styles.ul} {...props}>{children}</ul>,
+          ol: ({ children, ...props }) => <ol className={styles.ol} {...props}>{children}</ol>,
+          li: ({ children, ...props }) => <li className={styles.li} {...props}><FadeText>{children}</FadeText></li>,
+          // react-markdown v10: inline vs block is told apart by checking
+          // whether the code element sits inside a <pre>
+          code: (props) => {
+            const { children, ...rest } = props;
+            const isBlock = rest['className']?.includes('language-') ?? false;
+            if (isBlock) {
+              return <code className={styles.code} {...rest}>{children}</code>;
+            }
+            return <code className={styles.inlineCode} {...rest}>{children}</code>;
+          },
+          pre: ({ children, ...props }) => <pre className={styles.pre} {...props}>{children}</pre>,
+          blockquote: ({ children, ...props }) => <blockquote className={styles.blockquote} {...props}><FadeText>{children}</FadeText></blockquote>,
+          hr: (props) => <hr className={styles.hr} {...props} />,
+          strong: ({ children, ...props }) => <strong className={styles.strong} {...props}><FadeText>{children}</FadeText></strong>,
         }}
       >
         {content}

@@ -5,11 +5,43 @@
 
 .main {
   padding: 2rem 1rem;
-  min-height: calc(100vh - 60px);
+  min-height: 60vh;
   background: linear-gradient(135deg, #151318 0%, #1e1b20 50%, #151318 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  /* the terminal handles its own width; keep the page from ever
+     expanding past the viewport, whatever lives inside */
+  width: 100%;
+  overflow-x: clip;
+}
+
+.scaredBanner {
+  position: sticky;
+  top: 60px;
+  z-index: 20;
+  background: rgba(30, 27, 32, 0.92);
+  /* standard property only — the prod build dedupes it away if the
+     -webkit- alias is authored next to it (autoprefixer re-adds the alias) */
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #bd93f9;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  text-align: center;
+  font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+}
+
+.scaredLink {
+  color: #ff79c6;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.scaredLink:hover {
+  text-decoration-style: solid;
 }
 
 @media screen and (max-width: 996px) {
@@ -27,4 +59,11 @@
   color: #9a93a3;
   opacity: 0.8;
   pointer-events: none;
+}
+
+@media screen and (max-width: 768px) {
+  .scaredBanner {
+    font-size: 0.78rem;
+    padding: 0.45rem 0.6rem;
+  }
 }

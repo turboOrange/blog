@@ -2,83 +2,137 @@
 .terminalContainer {
   width: 100%;
   position: relative;
-  font-family: 'Courier New', monospace;
+  font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
   cursor: text;
 
   /* Push the front face forward by half the slab thickness (10px) */
   transform: translateZ(10px);
 
-  /* Frosted glass surface */
-  background: rgba(28, 24, 34, 0.50);
-  backdrop-filter: blur(24px) saturate(1.7) brightness(1.1);
-  -webkit-backdrop-filter: blur(24px) saturate(1.7) brightness(1.1);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 18px;
+  /* Radius + overflow:hidden on this 3D-transformed layer forces Chromium
+     to build a rounded-corner mask layer — a black-triangle trigger under
+     rotateX/rotateY. Children (glare, sweeps, overlays) clip themselves with
+     their own matching radius, so the container doesn't need to clip. */
+  outline: 1px solid transparent;
+  isolation: isolate;
 
-  /* Glass rim: bright top-left catch-light fades to dark on the other sides */
-  border-top:    1px solid rgba(255, 255, 255, 0.40);
-  border-left:   1px solid rgba(255, 255, 255, 0.22);
-  border-right:  1px solid rgba(255, 255, 255, 0.07);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  /* ── The "liquid glass" core: stacked translucency, no backdrop-filter ──
+     Layer A: top sheen that fades within the first third of the pane
+     Layer B: glass body — bright cool top-left, deep absorbing base
+     Layer C: bottom bounce — light piping through the slab leaking out    */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045) 0%,
+      rgba(255, 255, 255, 0.018) 12%,
+      transparent 30%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(190, 170, 235, 0.30) 0%,
+      rgba(60, 42, 90, 0.28) 38%,
+      rgba(16, 12, 24, 0.36) 100%
+    );
+
+  /* Liquid rim: beading highlight top, chromatic catch-lights on bright
+     corners, thin dark meniscus at the bottom */
+  border-top:    1px solid rgba(255, 255, 255, 0.55);
+  border-left:   1px solid rgba(255, 255, 255, 0.30);
+  border-right:  1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 
   box-shadow:
-    0  8px 28px  rgba(0, 0, 0, 0.65),
-    0 28px 70px  rgba(157, 78, 221, 0.38),
-    0 55px 100px rgba(157, 78, 221, 0.16),
-    inset 0   1px 0  rgba(255, 255, 255, 0.28),
-    inset 1px 0   0  rgba(255, 255, 255, 0.14),
-    inset 0  -1px 0  rgba(255, 255, 255, 0.04);
+    /* ambient occlusion under the slab */
+    0  4px 12px  rgba(0, 0, 0, 0.28),
+    0 12px 32px  rgba(0, 0, 0, 0.45),
+    0 32px 80px  rgba(0, 0, 0, 0.35),
+    /* purple environment glow */
+    0 18px 60px rgba(157, 78, 221, 0.28),
+    0 48px 120px rgba(157, 78, 221, 0.12),
+    /* inner beading: bright top meniscus, side menisci, dark base */
+    inset 0   1px 0  rgba(255, 255, 255, 0.35),
+    inset 1px 0   0  rgba(255, 255, 255, 0.12),
+    inset 0  -1px 0  rgba(255, 255, 255, 0.06),
+    /* the tint absorbs its own edges — glassy depth */
+    inset 0 -18px 40px rgba(10, 7, 18, 0.35),
+    inset 0  22px 50px rgba(180, 150, 255, 0.10);
 }
 
-/* ── Specular glare streak across the front face ─────────────────────────── */
+/* ── Specular glare layers ─────────────────────────────────────────────────
+   Both live on the transformed front face so they rotate with the slab.
+   .glassGlare  — static diagonal polarization sheen
+   .glareSweep  — the moving highlight that sells tilt, positioned by
+                  --glare-x/--glare-y custom props kept in sync with the
+                  slab angle by the breathing loop (opacity = tilt amount). */
 .terminalContainer .glassGlare {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 10;
-  border-radius: 12px;
+  border-radius: 18px;
+  outline: 1px solid transparent;
   background: linear-gradient(
     118deg,
-    rgba(255, 255, 255, 0.11) 0%,
-    rgba(255, 255, 255, 0.04) 35%,
-    transparent 60%
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.035) 30%,
+    transparent 55%
+  );
+}
+
+.terminalContainer .glareSweep {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  border-radius: 18px;
+  outline: 1px solid transparent;
+  opacity: var(--glare-o, 0);
+  background: radial-gradient(
+    55% 40% at var(--glare-x, 70%) var(--glare-y, 25%),
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.07) 38%,
+    transparent 70%
   );
 }
 
 /* ── The four extruded edge faces ────────────────────────────────────────── */
 /* All faces share this base: they're absolute, sized by the flipInner box,
-   and live in the same preserve-3d context as the terminal.                 */
+   and live in the same preserve-3d context as the terminal.
+   Liquid edge: bright at the outer lip (light piping around the slab),
+   dark toward the pane — reads as a refractive chamfer.                   */
 .glassFace {
   position: absolute;
-  /* Glass edge colour — slightly lighter than the body, with a purple tint */
   background: linear-gradient(
     to bottom,
-    rgba(120, 90, 160, 0.55),
-    rgba(55, 38, 75, 0.75)
+    rgba(190, 165, 240, 0.55),
+    rgba(70, 48, 110, 0.70)
   );
-  /* Edges pick up the same specular: bright on the "top" edge of each face  */
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  /* specular lip highlight */
+  border: 1px solid rgba(255, 255, 255, 0.22);
   /* Ensure the face is not drawn when facing away */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  /* uniform border-radius + transparent outline: both prevent Chromium
+     from building mask layers / emitting black edge triangles while the
+     slab rotates (non-uniform radii force mask layers, which glitch) */
+  border-radius: 18px;
+  outline: 1px solid transparent;
+  will-change: transform;
 }
 
-/* Top edge face
-   translateY(-50%) moves it to sit flush at the top of the slab,
-   translateZ(0) centres it in the slab depth,
-   rotateX(90deg) tilts it flat to face upward.                              */
+/* Top edge face */
 .faceTop {
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: 18px;
+  right: 18px;
   height: 20px;                /* = slab thickness */
-  border-radius: 12px 12px 0 0;
   transform: translateY(-50%) translateZ(0px) rotateX(90deg);
   transform-origin: center bottom;
   background: linear-gradient(
     to top,
-    rgba(80, 55, 110, 0.50),
-    rgba(160, 120, 210, 0.65)
+    rgba(90, 62, 135, 0.50),
+    rgba(200, 178, 250, 0.68)
   );
   border-bottom: none;
 }
@@ -86,16 +140,15 @@
 /* Bottom edge face */
 .faceBottom {
   bottom: 0;
-  left: 12px;
-  right: 12px;
+  left: 18px;
+  right: 18px;
   height: 20px;
-  border-radius: 0 0 12px 12px;
   transform: translateY(50%) translateZ(0px) rotateX(-90deg);
   transform-origin: center top;
   background: linear-gradient(
     to bottom,
-    rgba(80, 55, 110, 0.55),
-    rgba(35, 22, 52, 0.80)
+    rgba(90, 62, 135, 0.55),
+    rgba(22, 14, 36, 0.85)
   );
   border-top: none;
 }
@@ -103,16 +156,15 @@
 /* Left edge face */
 .faceLeft {
   left: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 18px;
+  bottom: 18px;
   width: 20px;
-  border-radius: 12px 0 0 12px;
   transform: translateX(-50%) translateZ(0px) rotateY(-90deg);
   transform-origin: right center;
   background: linear-gradient(
     to left,
-    rgba(80, 55, 110, 0.50),
-    rgba(140, 100, 190, 0.60)
+    rgba(90, 62, 135, 0.50),
+    rgba(175, 140, 235, 0.62)
   );
   border-right: none;
 }
@@ -120,16 +172,15 @@
 /* Right edge face */
 .faceRight {
   right: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 18px;
+  bottom: 18px;
   width: 20px;
-  border-radius: 0 12px 12px 0;
   transform: translateX(50%) translateZ(0px) rotateY(90deg);
   transform-origin: left center;
   background: linear-gradient(
     to right,
-    rgba(80, 55, 110, 0.50),
-    rgba(35, 22, 52, 0.75)
+    rgba(90, 62, 135, 0.50),
+    rgba(22, 14, 38, 0.82)
   );
   border-left: none;
 }
@@ -137,8 +188,10 @@
 
 /* ── Flip card wrapper ──────────────────────────────────────────────────────── */
 .flipWrapper {
-  width: 90vw;
-  max-width: 1600px;
+  /* % of the containing block (not vw — vw includes the scrollbar width
+     which is what caused page-level horizontal scrollbars + layout jumps
+     between browsers) */
+  width: min(90%, 1600px);
   margin: 0 auto;
   position: relative;
 }
@@ -149,6 +202,9 @@
   width: 100%;
   transform-style: preserve-3d;
   will-change: transform;
+  /* z-index MUST stay auto: a z-indexed flipInner breaks the lensRim
+     bands' backdrop sampling (verified empirically — the bands only
+     filter the live backdrop when they can promote above this node) */
 }
 
 /* ── Back overlay — lives on the back face in 3-D space ─────────────────────
@@ -156,27 +212,37 @@
    scaleX(-1)             → mirrors the content it reveals underneath
    backface-visibility    → hidden when front is showing, visible when back is
    pointer-events: none   → the real terminal beneath handles interaction
-   The frost uses backdrop-filter so it actually blurs whatever is rendered
-   behind it in the normal stacking order (the live terminal).             */
+   The frost is an opaque gradient — no backdrop reads happen on the
+   rotated plane, so flipping never triggers compositor glitches.      */
 .backOverlay {
   position: absolute;
   inset: 0;
   transform: rotateY(180deg) scaleX(-1);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 18px;
+  /* no overflow:hidden here — radius+overflow on a rotated layer forces a
+     corner mask layer, a known black-triangle trigger; children clip
+     themselves with their own radius instead */
   pointer-events: none;
+  outline: 1px solid transparent;
 }
 
-/* Frosted glass layer */
+/* Frosted glass layer — solid enough to hide the terminal behind it; the
+   gradient + ASCII glow carry the frost look without a backdrop-filter
+   (backdrop-filter on a rotated back-plane is the black-triangle glitch
+   that showed up when flipping the terminal) */
 .frostOverlay {
   position: absolute;
   inset: 0;
-  backdrop-filter: blur(14px) saturate(0.5) brightness(0.65);
-  -webkit-backdrop-filter: blur(14px) saturate(0.5) brightness(0.65);
-  background: rgba(45, 43, 48, 0.5);
-  border-radius: 12px;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(52, 42, 66, 0.97) 0%,
+      rgba(38, 31, 48, 0.99) 50%,
+      rgba(24, 18, 34, 1) 100%
+    );
+  border-radius: 18px;
 }
 
 /* ASCII art on top of the frost */
@@ -186,18 +252,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.backAsciiOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   pointer-events: none;
+  border-radius: 18px;
 }
-
-
 
 .terminalHeader {
   background: rgba(15, 12, 18, 0.45);
@@ -206,6 +264,9 @@
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  /* self-clips to the container's top corners now that the container
+     itself no longer clips (mask-layer glitch prevention) */
+  border-radius: 17px 17px 0 0;
 }
 
 .terminalButtons {
@@ -238,24 +299,30 @@
   font-size: 0.85rem;
   flex: 1;
   text-align: center;
-  font-family: monospace;
+  font-family: inherit;
 }
 
 .terminalBody {
   padding: 1.5rem;
   height: 60vh;
-  min-height: 400px;
+  min-height: 350px;
+  max-height: 640px;
   overflow-y: auto;
+  /* falling back to a native scrollbar is fine; thin styling for webkit */
+  scrollbar-width: thin;
+  scrollbar-color: #44475a #2d2b30;
   background: rgba(38, 34, 42, 0.30);
   color: #bd93f9;
   font-size: 1rem;
   line-height: 1.6;
+  overscroll-behavior: contain;
 }
 
 .line {
   margin-bottom: 0.5rem;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .system {
@@ -293,12 +360,15 @@
 
 .input {
   flex: 1;
+  min-width: 0; /* let it actually shrink on narrow screens */
   background: transparent;
   border: none;
   outline: none;
   color: #ff79c6;
-  font-family: 'Courier New', monospace;
-  font-size: 0.95rem;
+  font-family: inherit;
+  /* 16px is the magic number — smaller sizes make iOS Safari zoom the page
+     on focus, which felt like "the site is broken on mobile" */
+  font-size: max(16px, 0.95rem);
   caret-color: #bd93f9;
 }
 
@@ -393,12 +463,21 @@
   opacity: 0.8;
 }
 
-/* Welcome banner ASCII art — scales down aggressively on phones */
+/* Welcome banner ASCII art — scales down aggressively on phones.
+   The transform-based scaling shrinks the rendered box too, so it never
+   forces a horizontal scrollbar on any browser. */
+.welcomeWrap {
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
 .welcomeBanner {
   margin: 0;
   white-space: pre;
-  font-family: 'Courier New', monospace;
-  font-size: clamp(0.28rem, 1.6vw, 0.85rem);
+  font-family: inherit;
+  font-size: clamp(0.28rem, 1.1vw, 0.85rem);
   line-height: 1.2;
   color: inherit;
 }
@@ -414,7 +493,11 @@
 
 .asciiBack {
   color: rgba(189, 147, 249, 0.9);
-  font-family: 'Courier New', monospace;
+  /* must be an explicit monospace stack — this <pre> lives in the back
+     overlay (a sibling of .terminalContainer, not a child), so `inherit`
+     picks up the page's proportional font and destroys the art spacing */
+  font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
   font-size: clamp(0.3rem, 0.75vw, 0.7rem);
   line-height: 1.2;
   text-align: center;
@@ -433,11 +516,11 @@
 
 .completionItem {
   color: #8be9fd;
-  font-family: 'Courier New', monospace;
+  font-family: inherit;
   font-size: 0.9rem;
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling (Blink/WebKit; Firefox uses scrollbar-color above) */
 .terminalBody::-webkit-scrollbar {
   width: 8px;
 }
@@ -455,19 +538,37 @@
   background: #6272a4;
 }
 
-/* Responsive */
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+/* Tablets and small laptops */
+@media (max-width: 1024px) {
+  .welcomeBanner {
+    font-size: clamp(0.26rem, 1.4vw, 0.8rem);
+  }
+}
+
+/* Phones: no 3D flip gestures (guarded in JS too), denser layout */
 @media (max-width: 768px) {
+  .flipWrapper {
+    width: 100%;
+  }
+
+  .glassFace {
+    display: none; /* the extruded edges don't read at this size */
+  }
+
   .terminalContainer {
-    width: 90vw;
-    margin: 1rem auto;
-    border-radius: 8px;
+    border-radius: 10px;
+    transform: none; /* skip 3D slab — mobile GPUs rounded the corners
+                        oddly with the translateZ stacking */
   }
 
   .terminalBody {
-    padding: 1rem;
-    font-size: 0.85rem;
-    height: 55vh;
-    min-height: 350px;
+    padding: 0.9rem;
+    font-size: 0.9rem;
+    height: auto;
+    min-height: 50vh;
+    max-height: 58vh;
   }
 
   .menuItem {
@@ -481,5 +582,9 @@
 
   .projectItem {
     flex-wrap: wrap;
+  }
+
+  .welcomeBanner {
+    font-size: 0.24rem;
   }
 }

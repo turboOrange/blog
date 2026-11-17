@@ -9,8 +9,14 @@
     align-items: center;
     justify-content: center;
     background: rgba(5, 3, 15, 0.82);
+    /* standard property only — the prod build dedupes it away if the
+       -webkit- alias is authored next to it (autoprefixer re-adds it) */
     backdrop-filter: blur(6px);
     pointer-events: all;
+    /* the overlay is the viewport box — nothing inside it can create a page
+       scrollbar, no matter how wild the ASCII art sizes */
+    overflow: hidden;
+    padding: 1rem;
 }
 
 .overlayFadeout {
@@ -308,15 +314,16 @@
 }
 
 .bigGhost {
-    font-size: clamp(2rem, 6vw, 4rem);
+    font-size: clamp(1.4rem, 6vw, 4rem);
     line-height: 1.1;
     margin: 0;
     white-space: pre;
-    font-family: monospace;
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+        'Liberation Mono', monospace;
     background: transparent;
     animation: ghostPulse 0.9s ease-in-out infinite alternate;
     overflow: hidden;
-    max-width: 100vw;
+    max-width: 100%;
 }
 
 @keyframes ghostPulse {
